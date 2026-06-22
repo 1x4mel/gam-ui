@@ -1,0 +1,121 @@
+# GAM — continuous integration for the gam-ui SPA.
+#
+# Scope: the standalone Vue 3 SPA under gam-ui/ (lint, unit, RFC-6238 TOTP
+# vectors, production build). Backend Frappe + Playwright E2E run on the
+# self-hosted dev bench (see md/AGENTS.md, .ai/test-commands.md) — they need a
+# live erp.local site, so they are intentionally NOT part of this hosted CI.
+#
+# Trigger: every pull_request + push to main. All 4 steps are independent jobs
+# so a lint failure still shows whether build/unit broke too. Each job restores
+# the npm cache and runs `npm ci` from a single lockfile.
+name: gam-ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Cancel superseded runs on the same ref to save minutes.
+concurrency:
+  group: gam-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: gam-ui
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: gam-ui/package-lock.json
+      - run: npm ci
+      # Baseline (P0.3) still carries ~30 warn-level findings; `npm run lint`
+      # exits 0 on warnings. Flip to `--max-warnings 0` once the warn backlog is
+      # cleared (tracked in plans/gam-code-quality-and-hardening.md P0.3/P0.4).
+      - run: npm run lint
+
+  unit:
+    name: Unit tests (vitest)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: gam-ui
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: gam-ui/package-lock.json
+      - run: npm ci
+      - run: npm run test:unit
+
+  totp:
+    name: RFC-6238 TOTP vectors
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: gam-ui
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: gam-ui/package-lock.json
+      # totp-rfc6238.mjs is zero-dependency (Web Crypto), so it runs without
+      # `npm ci`; we still install for parity + future shared deps.
+      - run: npm ci
+      - run: npm run test:totp
+
+  build:
+    name: Production build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: gam-ui
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: gam-ui/package-lock.json
+      - run: npm ci
+      # build:prod loads .env.production (VITE_BASE_URL=/gam-ui/). The deploy.sh
+      # base-path assertion is the runtime guard that the bundle references the
+      # correct base; CI only checks the build itself succeeds.
+      - run: npm run build:prod
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gam-ui-dist
+          path: gam-ui/dist
+          retention-days: 7
+
+  # Codegen drift guard (plans TD1.3). Stdlib-only Python — no Frappe needed.
+  # Today the backend lives OUTSIDE this repo (~/frappe-bench/apps/gam), so
+  # `gen.py all` dry-runs to "backend not present" and exits 0 (informational).
+  # This step becomes a REAL idempotent guard automatically once:
+  #   (1) the backend lands in-repo (plans P4.3), AND
+  #   (2) the .gen_*.py templates are regenerated FROM the live files (plans P4.4)
+  # — at which point any drift between the generators and the committed backend
+  # fails the build. It can never clobber the live backend: --write on STALE
+  # targets is refused without --force (see gen.py docstring).
+  codegen:
+    name: Codegen drift guard
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      # Dry-run (read-only). Exit 0 while the backend is out-of-repo.
+      - run: python gen.py status
+      - run: python gen.py all

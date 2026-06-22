@@ -1,0 +1,27 @@
+# GAM inbound email worker — Cloudflare Email Routing → gam.api.receive_email_webhook
+# Deploy:  cd gam-ui/deploy && npm install postal-mime && npx wrangler deploy
+# Then in the Cloudflare dashboard point the inbox routing rule at this worker
+# and set the two secrets below (wrangler secret put <NAME>):
+#   GAM_WEBHOOK_URL
+#   GAM_WEBHOOK_SECRET
+
+name = "gam-email-worker"
+main = "cloudflare-email-worker.js"
+compatibility_date = "2024-11-01"
+
+# Workers pay-as-you-go supports the `email()` handler on the free plan for
+# inbound routing. The webhook URL + secret are provided as encrypted
+# environment variables (secrets).
+#
+# Phase 4.2 — transient (5xx) dead-letter queue: instead of permanently
+# bouncing emails when Frappe is briefly unavailable, the worker buffers them
+# into this KV namespace and an operator drains them once the backend is
+# healthy (see the worker `fetch()` handler + gam.api.drain_email_dlq).
+# Create once:  npx wrangler kv:namespace create GAM_DLQ
+[[kv_namespaces]]
+binding = "GAM_DLQ"
+id = "REPLACE_WITH_GAM_DLQ_NAMESPACE_ID"
+
+# Drain secrets (set via `wrangler secret put`):
+#   GAM_DRAIN_URL     https://<public-host>/api/method/gam.api.drain_email_dlq
+#   GAM_DRAIN_TOKEN   bearer token / Frappe API key authorizing the drain call
