@@ -23,6 +23,15 @@ import {
   listFixtures,
 } from './lib.js'
 
+// The sidebar per-game badge (gamesByRole singleton) is only refreshed via the
+// `gam_role_sections_changed` realtime event. If that event is missed, the badge
+// drifts from the live list — the "badge shows 1 but list shows 0" phantom bug.
+// This helper returns the sidebar <a> for a given (role, game) section link.
+function sectionLink(page, role, game) {
+  const href = `/role/${encodeURIComponent(role)}/game/${encodeURIComponent(game)}`
+  return page.locator('aside').first().locator(`a[href="${href}"]`)
+}
+
 let consoleErrors = []
 
 test.describe('GAM role|game view', () => {
@@ -121,6 +130,49 @@ test.describe('GAM role|game view', () => {
       await expect(page).toHaveURL(/\/role\/TRADER\/game\//)
     } finally {
       await teardownTraderWithGame(page, game, account, binding)
+    }
+  })
+
+  // Regression for the "badge shows 1 but list shows 0" phantom-account bug.
+  // The sidebar badge cache can go stale when a binding changes out-of-band
+  // (deleted via REST / another tab / a dropped websocket) so the
+  // `gam_role_sections_changed` event never reaches this client. Opening the
+  // affected section must (a) show the authoritative empty list AND (b) self-heal
+  // the stale sidebar badge so it no longer advertises a phantom count.
+  test('phantom badge self-heals when the list disagrees (badge==list)', async ({ page }) => {
+    await login(page, { user: env.adminUser, pass: env.adminPass, totp: env.adminTotp })
+    const { game, account, binding } = await seedTraderWithGame(page)
+
+    try {
+      // Prime the sidebar cache: the (TRADER, game) section shows with badge 1.
+      await page.goto(`${env.base}/role/TRADER`)
+      await waitForHeading(page, 'Tất cả Trader')
+      await expect(sectionLink(page, 'TRADER', game.name)).toBeVisible({ timeout: 10000 })
+      // The badge must equal the real list total (1) — never a phantom.
+      const badge = await sectionLink(page, 'TRADER', game.name).locator('span').last().textContent()
+      expect((badge || '').trim()).toBe('1')
+
+      // Simulate the stale-cache path: delete the binding out-of-band via REST,
+      // bypassing the browser realtime socket. Backend now reports 0 for this
+      // section, but the client-side gamesByRole cache still says 1.
+      await deleteFixture(page, 'GAM Account Role Game', binding.name)
+
+      // Open the affected section via the (now stale) sidebar link.
+      await sectionLink(page, 'TRADER', game.name).click()
+      await waitForHeading(page, game.game_name)
+
+      // (a) The authoritative list is empty — no phantom account rendered.
+      await expect(page.getByText(/Không có tài khoản/)).toBeVisible({ timeout: 10000 })
+      await expect(page.getByText(account.username, { exact: true })).toHaveCount(0)
+
+      // (b) Self-heal: the sidebar re-aggregated, so the stale badge/link for a
+      // now-empty section is removed (it can no longer advertise count 1).
+      await expect(sectionLink(page, 'TRADER', game.name)).toHaveCount(0, { timeout: 10000 })
+    } finally {
+      // Account + game are left behind by the out-of-band binding delete; clean
+      // them directly (no binding remains to trip link integrity).
+      if (account) await deleteFixture(page, 'GAM Account', account.name).catch(() => {})
+      if (game) await deleteFixture(page, 'GAM Game', game.name).catch(() => {})
     }
   })
 

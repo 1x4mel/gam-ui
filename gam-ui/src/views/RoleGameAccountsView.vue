@@ -68,7 +68,7 @@
  * already filters by role+game and enforces has_access server-side; the live lease
  * state comes from the shared useActiveUsage singleton.
  */
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import PageHeader from '../components/PageHeader.vue'
 import PaginatedListLayout from '../components/PaginatedListLayout.vue'
@@ -91,7 +91,7 @@ defineOptions({ name: 'RoleGameAccountsView' })
 const route = useRoute()
 const { connected, on: onRt, off: offRt } = useRealtime()
 const { isGamAdmin, isAdmin } = useAuth()
-const { roleOptions, games, load: loadMeta } = useGamMetadata()
+const { roleOptions, games, gamesByRole, loadGamesByRole, load: loadMeta } = useGamMetadata()
 const { leaseFor } = useActiveUsage()
 const { checkin } = useCheckout()
 const { success, error: notifyError } = useNotify()
@@ -142,6 +142,25 @@ const {
 } = useServerPaginatedList('gam_role_accounts', fetchAccounts, {
   defaultSize: 20,
   watchSources: [searchQuery, roleParam, gameParam],
+})
+
+// ---- sidebar badge self-heal ----
+// The per-game badge count in the sidebar (gamesByRole) is a module-level
+// singleton refreshed ONLY via the `gam_role_sections_changed` realtime event.
+// If that event never reached this client (dropped websocket, direct DB edit,
+// stale tab opened before the change), the badge drifts from the live list —
+// the "badge shows 1 but list shows 0" phantom-account symptom. Whenever the
+// authoritative list for this (role, game) lands, reconcile: if the cached
+// count differs from the real total, force-refresh the sidebar cache so the
+// badge corrects itself the instant the affected section is opened.
+watch(totalItems, (total) => {
+  if (total == null || !gameParam.value) return        // only per-game sections carry a badge
+  if (searchQuery.value.trim()) return                  // search shrinks the list, not the badge
+  const section = gamesByRole.value[roleParam.value]
+  if (!Array.isArray(section)) return                   // cache not loaded for this role yet
+  const cached = section.find((g) => g.game === gameParam.value)
+  const cachedCount = cached ? cached.count : 0
+  if (cachedCount !== total) loadGamesByRole(true)
 })
 
 // ---- lease actions (operate mode) ----
