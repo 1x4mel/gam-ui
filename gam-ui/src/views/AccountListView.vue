@@ -72,6 +72,7 @@
              the operate role|game view reuses the same card in mode="operate". -->
         <AccountCard
           v-for="acc in items" :key="acc.name" :account="acc" mode="admin" :can-manage="canCreate"
+          :now="serverNow" :settings="settings" :current-user-id="user"
           @edit="openEdit(acc)" @delete="askDelete(acc)"
         />
       </div>
@@ -92,7 +93,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import PageHeader from '../components/PageHeader.vue'
 import PaginatedListLayout from '../components/PaginatedListLayout.vue'
@@ -105,6 +106,8 @@ import { useServerPaginatedList } from '../composables/useServerPaginatedList.js
 import { useAuth } from '../composables/useAuth.js'
 import { useRealtime } from '../composables/useRealtime.js'
 import { useGamMetadata } from '../composables/useGamMetadata.js'
+import { useActiveUsage } from '../composables/useActiveUsage.js'
+import { useElapsedTimer } from '../composables/useElapsedTimer.js'
 import { useNotify } from '../composables/useNotify.js'
 import { frappeCall } from '../api/index.js'
 
@@ -112,7 +115,9 @@ defineOptions({ name: 'AccountListView' })
 
 const route = useRoute()
 const { connected, on: onRt, off: offRt } = useRealtime()
-const { isGamAdmin, isAdmin } = useAuth()
+const { isGamAdmin, isAdmin, user } = useAuth()
+const { settings, serverTimeMs } = useActiveUsage()
+const { serverNow, start: startTimer, stop: stopTimer, syncClock } = useElapsedTimer()
 const { platformOptions, statusOptions, roleOptions, games, load: loadMeta, loadGamesByRole } = useGamMetadata()
 const { success } = useNotify()
 const canCreate = computed(() => isGamAdmin.value || isAdmin.value)
@@ -241,8 +246,15 @@ async function confirmDelete() {
   }
 }
 
+// One realtime clock for every card on the page. serverTimeMs is re-anchored
+// by useActiveUsage on each (debounced) usage refresh, so the per-card elapsed
+// timer stays aligned with the DB server's auto-release sweep.
+watch(serverTimeMs, (v) => { if (v) syncClock(v) })
+
 onMounted(() => {
   loadMeta()
+  startTimer()
+  if (serverTimeMs.value) syncClock(serverTimeMs.value)
   // role/game now live under /role/... (old URLs redirect there), so only the
   // platform deep-link filter is seeded from the query here.
   if (route.query.platform) {
@@ -254,5 +266,6 @@ onMounted(() => {
 
 onUnmounted(() => {
   offRt('gam_account_changed', onAccountChanged)
+  stopTimer()
 })
 </script>

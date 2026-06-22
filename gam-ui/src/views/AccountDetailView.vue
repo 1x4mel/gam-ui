@@ -132,6 +132,15 @@
 
         <!-- Meta -->
         <div class="bg-app-surface border border-app-border rounded-2xl p-6 shadow-sm">
+          <!-- Account ID (random Frappe name) — hidden on the list cards, shown
+               only here so admins can copy/share it when needed. -->
+          <div class="flex flex-col gap-1 mb-5">
+            <p class="text-[10px] text-app-text-muted uppercase font-black tracking-widest opacity-30">ID (mã tài khoản)</p>
+            <div class="flex items-center gap-2">
+              <span class="text-sm font-mono text-app-text-secondary">{{ account.name }}</span>
+              <CopyButton :text="account.name" />
+            </div>
+          </div>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
             <InfoRow label="Nguồn" :value="account.source || '—'" />
             <InfoRow label="Trạng thái" :value="account.status || '—'" />

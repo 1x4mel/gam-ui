@@ -20,12 +20,19 @@ import { frappeCall } from '../api/index.js'
  */
 const myActive = ref([])
 const allActive = ref([])
+// Accounts đang "nghỉ" (cooling) sau checkout, chưa đủ min_rested_hours.
+// Drives: section "Đang nghỉ" + bộ đếm countdown realtime.
+const resting = ref([])
 const settings = ref({
   max_online_hours: 8,
   min_rested_hours: 8,
   hard_cap_online_hours: 12,
   block_logout_with_active_lease: 1,
 })
+// DB-server clock at the moment of the last successful refresh (epoch ms).
+// The realtime elapsed timer adds this as a clock offset so it is immune to
+// browser-vs-server clock skew (the root cause of the old "0s" bug).
+const serverTimeMs = ref(null)
 const lastUpdated = ref(null)
 const loading = ref(false)
 
@@ -33,19 +40,36 @@ let boundHandler = null // stored ref so off() can remove the exact listener
 let debounceTimer = null
 let refreshInFlight = null
 
+// Normalise the (now wrapped) {server_epoch_now_ms, leases} shape while keeping
+// back-compat with older backends that returned a bare array.
+function unwrap(payload) {
+  if (payload && typeof payload === 'object' && !Array.isArray(payload) && 'leases' in payload) {
+    return { leases: payload.leases || [], serverMs: Number(payload.server_epoch_now_ms) || null }
+  }
+  return { leases: Array.isArray(payload) ? payload : [], serverMs: null }
+}
+
 async function refresh() {
   // Collapse concurrent refreshes (realtime burst + manual) into one round-trip.
   if (refreshInFlight) return refreshInFlight
   refreshInFlight = (async () => {
     loading.value = true
     try {
-      const [mine, all, s] = await Promise.all([
+      const [mine, all, s, rest] = await Promise.all([
         frappeCall('gam.api.get_my_active_usage').catch(() => []),
         frappeCall('gam.api.get_active_usage').catch(() => []),
         frappeCall('gam.api.get_gam_settings').catch(() => null),
+        frappeCall('gam.api.get_resting_usage').catch(() => null),
       ])
-      myActive.value = Array.isArray(mine) ? mine : []
-      allActive.value = Array.isArray(all) ? all : []
+      const mineU = unwrap(mine)
+      const allU = unwrap(all)
+      myActive.value = mineU.leases
+      allActive.value = allU.leases
+      resting.value = (rest && Array.isArray(rest.resting)) ? rest.resting : []
+      // Prefer the "all" server clock (authoritative). Either will do; fall back
+      // to the resting endpoint's clock.
+      serverTimeMs.value =
+        allU.serverMs || mineU.serverMs || (rest && Number(rest.server_epoch_now_ms)) || null
       if (s && typeof s === 'object') settings.value = { ...settings.value, ...s }
       lastUpdated.value = new Date()
     } finally {
@@ -85,6 +109,12 @@ export function useActiveUsage() {
     return allActive.value.find((u) => u.account === account) || null
   }
 
+  /** Find the resting (cooling) row (if any) for a given account name. */
+  function restingFor(account) {
+    if (!account) return null
+    return resting.value.find((u) => u.account === account) || null
+  }
+
   /** True if `account` is currently checked in by the session user `me`. */
   function isMine(account, me) {
     const l = leaseFor(account)
@@ -100,7 +130,9 @@ export function useActiveUsage() {
   return {
     myActive,
     allActive,
+    resting,
     settings,
+    serverTimeMs,
     lastUpdated,
     loading,
     myCount,
@@ -109,6 +141,7 @@ export function useActiveUsage() {
     bindRealtime,
     unbindRealtime,
     leaseFor,
+    restingFor,
     isMine,
     isLockedByOther,
   }

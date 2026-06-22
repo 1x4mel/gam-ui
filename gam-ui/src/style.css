@@ -8,6 +8,18 @@
   --color-app-text-primary: var(--app-text-primary);
   --color-app-text-secondary: var(--app-text-secondary);
   --color-app-text-muted: var(--app-text-muted);
+  /* Active-usage timer tier ladder (green → yellow → orange → red). */
+  --color-tier-safe: var(--tier-safe);
+  --color-tier-soon: var(--tier-soon);
+  --color-tier-near: var(--tier-near);
+  --color-tier-over: var(--tier-over);
+  --color-tier-critical: var(--tier-critical);
+  /* Resting (offline) tier ladder (blue → cyan → teal → green-ready). */
+  --color-tier-cool: var(--tier-cool);
+  --color-tier-warm: var(--tier-warm);
+  --color-tier-almost: var(--tier-almost);
+  /* Slow pulse for the "safe" status dot (default Tailwind pulse is ~2s). */
+  --animate-pulse-slow: pulse-slow 2.4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
 @layer base {
@@ -19,6 +31,16 @@
     --app-text-primary: #0f172a; /* slate-900 */
     --app-text-secondary: #334155; /* slate-700 */
     --app-text-muted: #64748b; /* slate-500 */
+    /* Timer tier colours — shade 600 for AA contrast on light surfaces. */
+    --tier-safe: #16a34a; /* green-600 */
+    --tier-soon: #ca8a04; /* yellow-600 */
+    --tier-near: #ea580c; /* orange-600 */
+    --tier-over: #dc2626; /* red-600 */
+    --tier-critical: #b91c1c; /* red-700 */
+    /* Resting tier — shade 600 for AA contrast. */
+    --tier-cool: #2563eb; /* blue-600 (cooling) */
+    --tier-warm: #0891b2; /* cyan-600 (warming) */
+    --tier-almost: #0d9488; /* teal-600 (almost ready) */
   }
 
   .dark {
@@ -29,6 +51,16 @@
     --app-text-primary: #f8fafc; /* white/slate-50 */
     --app-text-secondary: #cbd5e1; /* slate-300 */
     --app-text-muted: #94a3b8; /* slate-400 */
+    /* Timer tier colours — brighter 400/500 for dark surfaces. */
+    --tier-safe: #22c55e; /* green-500 */
+    --tier-soon: #eab308; /* yellow-500 */
+    --tier-near: #f97316; /* orange-500 */
+    --tier-over: #ef4444; /* red-500 */
+    --tier-critical: #f87171; /* red-400 */
+    /* Resting tier — brighter 400/500 for dark surfaces. */
+    --tier-cool: #3b82f6; /* blue-500 (cooling) */
+    --tier-warm: #22d3ee; /* cyan-400 (warming) */
+    --tier-almost: #2dd4bf; /* teal-400 (almost ready) */
   }
 
   body {
@@ -104,5 +136,54 @@
 
   .app-select:focus {
     @apply border-indigo-600;
+  }
+}
+
+/* Active-timer "safe" status dot: a calmer, slower pulse than the default. */
+@keyframes pulse-slow {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+
+/* ── Over-time warning utilities (shared by ActiveSection + AccountCard) ── */
+
+/* Blinking text/badge (e.g. "⚠️ QUÁ GIỜ"). */
+.gam-blink,
+.gam-blink-dot {
+  animation: gam-blink-text 1s steps(2, start) infinite;
+}
+
+/* Over-time red blinking border + pulsing accent. */
+.gam-over-warning {
+  border-color: rgb(239 68 68 / 0.6);
+  box-shadow: 0 0 0 1px rgb(239 68 68 / 0.35), 0 0 18px -4px rgb(239 68 68 / 0.5);
+  animation: gam-blink-border 1s steps(2, start) infinite;
+}
+
+/* Beyond the hard cap: thicker, brighter — the strongest urgency signal. */
+.gam-critical-warning {
+  border-width: 2px;
+  border-color: rgb(185 28 28 / 0.85);
+  box-shadow: 0 0 0 2px rgb(185 28 28 / 0.4), 0 0 26px -3px rgb(185 28 28 / 0.7);
+}
+
+@keyframes gam-blink-text {
+  0% { opacity: 1; }
+  50% { opacity: 0.25; }
+  100% { opacity: 1; }
+}
+
+@keyframes gam-blink-border {
+  0% {
+    border-color: rgb(239 68 68 / 0.85);
+    box-shadow: 0 0 0 1px rgb(239 68 68 / 0.45), 0 0 22px -3px rgb(239 68 68 / 0.6);
+  }
+  50% {
+    border-color: rgb(239 68 68 / 0.3);
+    box-shadow: 0 0 0 1px rgb(239 68 68 / 0.15);
+  }
+  100% {
+    border-color: rgb(239 68 68 / 0.85);
+    box-shadow: 0 0 0 1px rgb(239 68 68 / 0.45), 0 0 22px -3px rgb(239 68 68 / 0.6);
   }
 }

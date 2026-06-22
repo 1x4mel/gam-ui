@@ -36,7 +36,7 @@
       <div v-else class="space-y-2 max-w-4xl mx-auto pb-4">
         <AccountCard
           v-for="acc in items" :key="acc.name" :account="acc" mode="operate"
-          :can-force="canForce"
+          :can-force="canForce" :now="serverNow" :settings="settings" :current-user-id="user"
           @start="startLease(acc)" @end="endLease(acc)" @force="openForce(acc)"
         />
       </div>
@@ -82,6 +82,7 @@ import { useAuth } from '../composables/useAuth.js'
 import { useRealtime } from '../composables/useRealtime.js'
 import { useGamMetadata } from '../composables/useGamMetadata.js'
 import { useActiveUsage } from '../composables/useActiveUsage.js'
+import { useElapsedTimer } from '../composables/useElapsedTimer.js'
 import { useCheckout } from '../composables/useCheckout.js'
 import { useNotify } from '../composables/useNotify.js'
 import { frappeCall } from '../api/index.js'
@@ -90,9 +91,10 @@ defineOptions({ name: 'RoleGameAccountsView' })
 
 const route = useRoute()
 const { connected, on: onRt, off: offRt } = useRealtime()
-const { isGamAdmin, isAdmin } = useAuth()
+const { isGamAdmin, isAdmin, user } = useAuth()
 const { roleOptions, games, gamesByRole, loadGamesByRole, load: loadMeta } = useGamMetadata()
-const { leaseFor } = useActiveUsage()
+const { leaseFor, settings, serverTimeMs } = useActiveUsage()
+const { serverNow, start: startTimer, stop: stopTimer, syncClock } = useElapsedTimer()
 const { checkin } = useCheckout()
 const { success, error: notifyError } = useNotify()
 
@@ -196,12 +198,18 @@ function onForceDone() {
 // Re-fetch when any account's usage changes (refreshes rested + lock state).
 function onAccountChanged() { refresh() }
 
+// One realtime clock for every card on the page (same pattern as AccountListView).
+watch(serverTimeMs, (v) => { if (v) syncClock(v) })
+
 onMounted(() => {
   loadMeta()
+  startTimer()
+  if (serverTimeMs.value) syncClock(serverTimeMs.value)
   onRt('gam_account_changed', onAccountChanged)
 })
 
 onUnmounted(() => {
   offRt('gam_account_changed', onAccountChanged)
+  stopTimer()
 })
 </script>
