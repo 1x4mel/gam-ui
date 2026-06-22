@@ -285,7 +285,7 @@ const showLinkDialog = ref(false)
 const checkoutLoading = ref(false)
 
 const { checkin } = useCheckout()
-const { settings } = useActiveUsage()
+const { settings, refresh: refreshActive } = useActiveUsage()
 
 const gamesList = computed(() => roleGames.value || [])
 // Distinct role values this account is bound to (a single account may carry
@@ -426,6 +426,9 @@ async function loadActiveUsage() {
 function onCheckout() {
   showCheckout.value = false
   loadActiveUsage()
+  // Keep the shared active-usage singleton in sync so cards/lock state in
+  // other open views update without waiting for the websocket push.
+  refreshActive()
   activitySection.value?.refresh?.()
   success('Đã checkin — bắt đầu sử dụng tài khoản')
 }
@@ -433,6 +436,7 @@ function onCheckout() {
 function onForceRelease() {
   showForce.value = false
   loadActiveUsage()
+  refreshActive()
   activitySection.value?.refresh?.()
   success('Đã force checkout — tài khoản được giải phóng')
 }
@@ -443,6 +447,7 @@ async function handleCheckin() {
     await checkin({ account: account.value.name })
     success('Đã checkout — kết thúc phiên sử dụng')
     await loadActiveUsage()
+    refreshActive()
     activitySection.value?.refresh?.()
   } catch (e) {
     // P2.4: surface the failure so the user knows the lease did not release

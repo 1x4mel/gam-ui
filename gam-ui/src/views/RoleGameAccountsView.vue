@@ -93,7 +93,7 @@ const route = useRoute()
 const { connected, on: onRt, off: offRt } = useRealtime()
 const { isGamAdmin, isAdmin, user } = useAuth()
 const { roleOptions, games, gamesByRole, loadGamesByRole, load: loadMeta } = useGamMetadata()
-const { leaseFor, settings, serverTimeMs } = useActiveUsage()
+const { leaseFor, settings, serverTimeMs, refresh: refreshActive } = useActiveUsage()
 const { serverNow, start: startTimer, stop: stopTimer, syncClock } = useElapsedTimer()
 const { checkin } = useCheckout()
 const { success, error: notifyError } = useNotify()
@@ -172,6 +172,12 @@ function closeCheckout() { checkoutTarget.value = null }
 function onCheckoutDone() {
   success('Đã checkin')
   closeCheckout()
+  // The Checkin/Checkout button state is derived from the shared
+  // useActiveUsage singleton (allActive), NOT from the list items. Re-fetching
+  // the list alone leaves the lease cache stale, so the button would not flip
+  // until a realtime event (or F5) lands. Refresh both: active usage first so
+  // the button updates instantly, then the list for rested/lock meta.
+  refreshActive()
   refresh()
 }
 
@@ -179,6 +185,7 @@ async function endLease(acc) {
   try {
     await checkin({ account: acc.name, endReason: 'DONE' })
     success('Đã checkout')
+    refreshActive()
     refresh()
   } catch (e) {
     notifyError(e.message || 'Checkout thất bại')
@@ -192,6 +199,7 @@ function openForce(acc) {
 }
 function onForceDone() {
   forceTarget.value = null
+  refreshActive()
   refresh()
 }
 
