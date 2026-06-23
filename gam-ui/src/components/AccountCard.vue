@@ -30,7 +30,7 @@
         :class="g.is_main ? 'bg-indigo-500/15 text-indigo-300' : 'bg-app-bg text-app-text-muted'"
       >
         <span v-if="g.is_main">★</span> 🎮 {{ g.game_name || g.game
-        }}<span v-if="g.server_region" class="opacity-60">· {{ g.server_region }}</span>
+        }}<span v-if="g.server_name" class="opacity-60">· {{ g.server_name }}</span>
       </span>
     </div>
 

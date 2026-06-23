@@ -1,6 +1,6 @@
 // GAM browser e2e — governance thresholds (AdminSettingsView) coverage.
 //
-// The new admin "Cài đặt GAM" view persists the GAM Settings singleton
+// The admin "Cài đặt" view persists the GAM Settings singleton
 // (max_online_hours / min_rested_hours / hard_cap_online_hours /
 //  block_logout_with_active_lease) via gam.api.save_gam_settings. This spec
 // round-trips one field through the real form and confirms the write landed
@@ -46,7 +46,13 @@ test.describe('GAM governance settings (AdminSettingsView) e2e', () => {
   test('governance — max_online_hours round-trip then restore', async ({ page }) => {
     await login(page, { user: env.adminUser, pass: env.adminPass, totp: env.adminTotp })
     await gotoApp(page, '/admin/settings')
-    await waitForHeading(page, 'Cài đặt GAM')
+    await waitForHeading(page, 'Cài đặt')
+
+    // The governance form now lives under the lazy "Ngưỡng" top tab (it is
+    // rendered only when topTab === 'thresholds'). Click it so the number
+    // inputs mount before we interact with them.
+    await page.locator('.flex.items-center.gap-1.border-b')
+      .getByRole('button').filter({ hasText: 'Ngưỡng' }).click()
 
     // Capture the live values so we restore exactly (even if the test fails).
     const before = await getSettings(page)

@@ -214,7 +214,7 @@ const emailOptions = computed(() =>
 const gameOptions = computed(() => games.value.map(g => ({ value: g.name, label: g.game_name, description: g.publisher })))
 function serverOptionsFor(row) {
   if (!row.game) return []
-  return serversForGame(row.game).map(s => ({ value: s.name, label: s.region }))
+  return serversForGame(row.game).map(s => ({ value: s.name, label: s.server_name || s.name }))
 }
 function dlcOptionsFor(row) {
   if (!row.game) return []
@@ -252,6 +252,10 @@ async function submit() {
   error.value = ''
   try {
     const payload = { ...form.value }
+    // Preserve the account's tier on edit (PLATFORM stays PLATFORM, GAME stays
+    // GAME). Without this, save_account defaults account_level to GAME and would
+    // silently downgrade a PLATFORM node when edited through this modal.
+    payload.account_level = props.account?.account_level || 'GAME'
     delete payload.role
     // drop empty password fields so Frappe doesn't store/overwrite blanks
     if (!payload.account_password) delete payload.account_password

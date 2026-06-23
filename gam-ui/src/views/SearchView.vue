@@ -77,7 +77,7 @@
             <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
               <button
                 v-for="g in results.games" :key="g.name"
-                @click="goToGameAccounts(g.game_name)"
+                @click="goToGameAccounts(g.name)"
                 class="bg-app-surface border border-app-border rounded-2xl p-4 hover:border-indigo-600/50 transition text-left"
               >
                 <p class="font-black text-app-text-primary text-sm truncate">🎮 {{ g.game_name }}</p>
@@ -164,6 +164,6 @@ function clearQuery() {
 }
 
 function goToGameAccounts(gameName) {
-  router.push({ path: '/accounts', query: { game: gameName } })
+  router.push({ path: '/admin/game-accounts', query: { game: gameName } })
 }
 </script>

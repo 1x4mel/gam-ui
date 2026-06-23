@@ -159,12 +159,28 @@ async function teardownTraderItemWithGame(page, { game, account, binding } = {})
   }
 }
 
-/** Open the GamesView "Game & DLC" tab strip and pick a tab by visible label. */
-async function openGamesTab(page, tabLabel) {
-  await clickNav(page, 'Game & DLC')
-  await waitForHeading(page, 'Game & DLC')
-  const tabStrip = page.locator('.flex.items-center.gap-1.border-b')
-  await tabStrip.getByRole('button').filter({ hasText: tabLabel }).click()
+/**
+ * Navigate into the merged AdminSettingsView (Cài đặt) and open a sub-tab.
+ *
+ * The view exposes a two-level strip:
+ *   - TOP tabs (strip HAS `border-b`): "Game & DLC" (default), "Tuỳ chọn", "Ngưỡng".
+ *   - SUB tabs (strip has `mb-4 flex-wrap` but NOT `border-b`): rendered under
+ *     the active top tab — e.g. "Game"/"Server"/"DLC" under "Game & DLC",
+ *     "Platform"/"Role"/"Status" under "Tuỳ chọn".
+ *
+ * @param {import('@playwright/test').Page} page
+ * @param {string} topTabLabel - visible label of the TOP tab to activate.
+ * @param {string} subTabLabel - visible label of the SUB tab to click.
+ */
+async function openSettingsSubTab(page, topTabLabel, subTabLabel) {
+  await clickNav(page, 'Cài đặt')
+  await waitForHeading(page, 'Cài đặt')
+
+  const topStrip = page.locator('.flex.items-center.gap-1.border-b')
+  const subStrip = page.locator('.flex.items-center.gap-1.mb-4.flex-wrap:not(.border-b)')
+
+  await topStrip.getByRole('button').filter({ hasText: topTabLabel }).click()
+  await subStrip.getByRole('button').filter({ hasText: subTabLabel }).click()
 }
 
 // ===========================================================================
@@ -198,7 +214,7 @@ test.describe('GAM admin role/game/sidebar binding e2e', () => {
     }
 
     try {
-      await openGamesTab(page, 'Role')
+      await openSettingsSubTab(page, 'Tuỳ chọn', 'Role')
 
       const rolePairs = [[TRADER_ITEM_LABEL, TRADER_ITEM_VALUE], [TRADER_CURR_LABEL, TRADER_CURR_VALUE]]
       for (const [i, [label, value]] of rolePairs.entries()) {
@@ -255,7 +271,7 @@ test.describe('GAM admin role/game/sidebar binding e2e', () => {
     test.skip(!seed, 'TRADER seed role not found — re-run gam.setup.seed_demo / patches')
 
     try {
-      await openGamesTab(page, 'Role')
+      await openSettingsSubTab(page, 'Tuỳ chọn', 'Role')
 
       await test.step('delete the Trader role card', async () => {
         const card = page.locator('.rounded-2xl').filter({ hasText: 'Trader' }).filter({ hasText: '(TRADER)' }).first()
@@ -302,7 +318,7 @@ test.describe('GAM admin role/game/sidebar binding e2e', () => {
     ]
 
     try {
-      await openGamesTab(page, 'Game')
+      await openSettingsSubTab(page, 'Game & DLC', 'Game')
 
       for (const [i, g] of games.entries()) {
         // Toasts stack; clear the previous one before triggering the next so
@@ -342,7 +358,7 @@ test.describe('GAM admin role/game/sidebar binding e2e', () => {
     await createFixture(page, 'GAM Game', { game_name: name, is_active: 1 })
 
     try {
-      await openGamesTab(page, 'Game')
+      await openSettingsSubTab(page, 'Game & DLC', 'Game')
       const card = page.locator('.rounded-2xl').filter({ hasText: name }).first()
       await expect(card).toBeVisible({ timeout: 10_000 })
 

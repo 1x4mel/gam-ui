@@ -20,11 +20,29 @@ const routes = [
       { path: 'emails/:name', component: () => import('../views/EmailDetailView.vue'), name: 'EmailDetailView' },
 
       // Accounts module (F4)
-      // `/accounts` = admin back-office (CRUD, all filters). The operational,
-      // member-facing role|game view lives under `/role/...` below — scope is
-      // locked from path params, never from a mutable filter.
-      { path: 'accounts', component: () => import('../views/AccountListView.vue'), name: 'AccountListView' },
+      // The admin back-office now lives at `/admin/game-accounts`. `/accounts`
+      // is kept only as a back-compat redirect (old bookmarks, role|game deep
+      // links) — the operational member-facing view lives under `/role/...`.
+      {
+        path: 'accounts',
+        redirect: (to) => {
+          const role = to.query.role
+          if (role) {
+            if (to.query.game) {
+              return { name: 'RoleGameAccountsView', params: { role: String(role), game: String(to.query.game) } }
+            }
+            return { name: 'RoleAccountsView', params: { role: String(role) } }
+          }
+          return { path: '/admin/game-accounts', query: to.query.game ? { game: String(to.query.game) } : {} }
+        },
+      },
       { path: 'accounts/:name', component: () => import('../views/AccountDetailView.vue'), name: 'AccountDetailView' },
+      // Platform-tier account detail (Thân). A dedicated route + view, distinct
+      // from GAME nodes (/accounts/:name) so the two account tiers get their own
+      // layouts (platform shows its child game nodes + billing; game shows its
+      // inherited platform credentials). AccountDetailView redirects a PLATFORM
+      // doc here; PlatformAccountDetailView redirects a GAME node back.
+      { path: 'platform-accounts/:name', component: () => import('../views/PlatformAccountDetailView.vue'), name: 'PlatformAccountDetailView' },
 
       // Operational role|game view (one component, optional :game).
       //   /role/:role            → every account of that role (all games)
@@ -39,7 +57,8 @@ const routes = [
       { path: 'account', component: () => import('../views/AccountSettingsView.vue'), name: 'AccountSettingsView' },
 
       // Admin (F5 / F6) — GAM Admin only
-      { path: 'admin/games', component: () => import('../views/GamesView.vue'), name: 'GamesView', meta: { roles: ['GAM Admin'] } },
+      { path: 'admin/platforms', component: () => import('../views/PlatformAccountsView.vue'), name: 'PlatformAccountsView', meta: { roles: ['GAM Admin'] } },
+      { path: 'admin/game-accounts', component: () => import('../views/GameAccountsView.vue'), name: 'GameAccountsView', meta: { roles: ['GAM Admin'] } },
       { path: 'admin/reveal-log', component: () => import('../views/RevealLogView.vue'), name: 'RevealLogView', meta: { roles: ['GAM Admin'] } },
       { path: 'admin/code-request-log', component: () => import('../views/CodeRequestLogView.vue'), name: 'CodeRequestLogView', meta: { roles: ['GAM Admin'] } },
       { path: 'admin/email-inbound-log', component: () => import('../views/EmailInboundLogView.vue'), name: 'EmailInboundLogView', meta: { roles: ['GAM Admin'] } },

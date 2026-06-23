@@ -55,8 +55,8 @@ test.describe('GAM admin CRUD e2e', () => {
     // Purge any stale e2e games left behind by an interrupted run.
     await cleanupFixtures(page, 'GAM Game', [['game_name', 'like', `${E2E_PREFIX}%`]])
 
-    await clickNav(page, 'Game & DLC')
-    await waitForHeading(page, 'Game & DLC')
+    await clickNav(page, 'Cài đặt')
+    await waitForHeading(page, 'Cài đặt')
 
     await test.step('create a game via the admin form', async () => {
       await page.getByRole('button', { name: /Thêm Game/ }).click()
@@ -78,10 +78,10 @@ test.describe('GAM admin CRUD e2e', () => {
       await expect(row.getByRole('button', { name: 'Tắt', exact: true })).toBeVisible({ timeout: 10000 })
     })
 
-    await test.step('Server / DLC tabs switch and render', async () => {
-      // The tab strip is the only `.flex.items-center.gap-1.border-b`; scoping to
-      // it avoids ambiguity with the content-area "+ Thêm Server/DLC" buttons.
-      const tabStrip = page.locator('.flex.items-center.gap-1.border-b')
+    await test.step('Server / DLC sub-tabs switch and render', async () => {
+      // Server/DLC are sub-tabs under the default "Game & DLC" top tab. The
+      // sub-strip (no border-b) is distinct from the top-level tab strip.
+      const tabStrip = page.locator('.flex.items-center.gap-1.mb-4.flex-wrap:not(.border-b)')
       await tabStrip.getByRole('button').filter({ hasText: 'Server' }).click()
       await expect(page.getByRole('button', { name: /Thêm Server/ })).toBeVisible()
       await tabStrip.getByRole('button').filter({ hasText: 'DLC' }).click()
@@ -215,8 +215,8 @@ test.describe('GAM admin CRUD e2e', () => {
     const gameName = e2eName('game')
     await cleanupFixtures(page, 'GAM Game', [['game_name', 'like', `${E2E_PREFIX}%`]])
 
-    await clickNav(page, 'Game & DLC')
-    await waitForHeading(page, 'Game & DLC')
+    await clickNav(page, 'Cài đặt')
+    await waitForHeading(page, 'Cài đặt')
 
     await test.step('create a game', async () => {
       await page.getByRole('button', { name: /Thêm Game/ }).click()
@@ -254,9 +254,9 @@ test.describe('GAM admin CRUD e2e', () => {
     // Seed a game to attach the server to (server requires a game link).
     await createFixture(page, 'GAM Game', { game_name: gameName, is_active: 1 })
 
-    await clickNav(page, 'Game & DLC')
-    await waitForHeading(page, 'Game & DLC')
-    const tabStrip = page.locator('.flex.items-center.gap-1.border-b')
+    await clickNav(page, 'Cài đặt')
+    await waitForHeading(page, 'Cài đặt')
+    const tabStrip = page.locator('.flex.items-center.gap-1.mb-4.flex-wrap:not(.border-b)')
     await tabStrip.getByRole('button').filter({ hasText: 'Server' }).click()
 
     const serverName = e2eName('server')

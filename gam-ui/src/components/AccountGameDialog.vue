@@ -92,7 +92,7 @@ const error = ref('')
 const gameOptions = computed(() => games.value.map(g => ({ value: g.name, label: g.game_name, description: g.publisher })))
 const serverOptions = computed(() => {
   if (!form.value.game) return []
-  return servers.value.filter(s => s.game === form.value.game).map(s => ({ value: s.name, label: s.region, description: s.game }))
+  return servers.value.filter(s => s.game === form.value.game).map(s => ({ value: s.name, label: s.server_name || s.name, description: s.game }))
 })
 const dlcOptions = computed(() => {
   if (!form.value.game) return []

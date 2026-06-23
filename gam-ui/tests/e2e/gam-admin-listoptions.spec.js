@@ -3,7 +3,7 @@
 // Locks the behavior of the four pieces delivered under
 // `plans/accounts-email-redesign.md` that previously had no dedicated spec:
 //
-//   1. Configurable list Settings (GamesView Platform/Role/Status tabs) —
+//   1. Configurable list Settings (AdminSettingsView "Tuỳ chọn" sub-tabs) —
 //      create + delete a custom option through the SPA.
 //   2. Custom platform drives account creation — a Platform list option added
 //      by the admin is immediately pickable in the AccountFormModal chips, and
@@ -97,13 +97,16 @@ test.describe('GAM configurable lists + email delete/ignore (Plan §7)', () => {
     const label = e2eName('platform')
     const expectedValue = label.replace(/-/g, '_').toUpperCase() // UPPER_SNAKE auto-derive
 
-    await clickNav(page, 'Game & DLC')
-    await waitForHeading(page, 'Game & DLC')
+    await clickNav(page, 'Cài đặt')
+    await waitForHeading(page, 'Cài đặt')
 
-    const tabStrip = page.locator('.flex.items-center.gap-1.border-b')
+    // Platform is a sub-tab under the "Tuỳ chọn" top-level tab.
+    const topStrip = page.locator('.flex.items-center.gap-1.border-b')
+    const subStrip = page.locator('.flex.items-center.gap-1.mb-4.flex-wrap:not(.border-b)')
 
     await test.step('open the Platform tab and add a custom option', async () => {
-      await tabStrip.getByRole('button').filter({ hasText: 'Platform' }).click()
+      await topStrip.getByRole('button').filter({ hasText: 'Tuỳ chọn' }).click()
+      await subStrip.getByRole('button').filter({ hasText: 'Platform' }).click()
       // The configurable-list section's only "+ Thêm" button is the inline create.
       await page.getByRole('button', { name: /^\+ Thêm$/ }).click()
       await expect(page.getByRole('heading', { name: /Thêm Platform/ })).toBeVisible()

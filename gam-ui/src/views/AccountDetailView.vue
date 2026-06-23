@@ -2,7 +2,7 @@
   <DetailPageLayout :loading="loading" loading-text="Đang tải tài khoản..." max-width="max-w-5xl">
     <template #toolbar>
       <div class="flex items-center gap-3">
-        <BackButton @click="router.push('/accounts')" />
+        <BackButton @click="router.push('/admin/game-accounts')" />
         <h2 class="text-base sm:text-lg font-black text-app-text-primary uppercase tracking-tight">Chi tiết Tài khoản</h2>
       </div>
     </template>
@@ -98,35 +98,69 @@
 
       <!-- Single column layout (Req #6) -->
       <div class="space-y-6">
-        <!-- Credentials -->
-        <div class="bg-app-surface border border-app-border rounded-2xl p-6 shadow-sm space-y-5">
-          <h3 class="text-app-text-primary font-black text-sm uppercase tracking-tight">🔑 Thông tin đăng nhập</h3>
-
-          <!-- Email -->
-          <div class="flex flex-col gap-1">
-            <p class="text-[10px] text-app-text-muted uppercase font-black tracking-widest opacity-30">Email</p>
-            <div class="flex items-center gap-2 flex-wrap">
-              <span v-if="emailDoc?.address" class="text-sm font-black text-app-text-primary">{{ emailDoc.address }}</span>
-              <span v-else class="text-sm text-app-text-muted italic">{{ account.email || '—' }}</span>
-              <CopyButton v-if="emailDoc?.address" :text="emailDoc.address" />
-              <router-link v-if="emailDoc" :to="`/emails/${emailDoc.name}`" class="text-[10px] text-indigo-600 hover:underline ml-auto">→ xem mã</router-link>
+        <!-- Credentials — split into Game node / Platform (inherited) / Email -->
+        <div class="space-y-4">
+          <!-- ① Game account login (this node's own credentials) -->
+          <div class="bg-app-surface border border-app-border rounded-2xl p-6 shadow-sm space-y-4">
+            <div class="flex items-center justify-between gap-2 flex-wrap">
+              <h3 class="text-app-text-primary font-black text-sm uppercase tracking-tight">
+                {{ hasParent ? '🔑 Đăng nhập tài khoản Game' : '🔑 Đăng nhập tài khoản' }}
+              </h3>
+              <span v-if="hasParent" class="text-[10px] uppercase font-black px-2 py-0.5 rounded bg-amber-500/15 text-amber-500">Node Game</span>
             </div>
+            <p v-if="hasParent" class="text-[10px] text-app-text-muted italic">Đây là thông tin riêng của node Game. Nếu trống, node dùng chung thông tin đăng nhập với Platform cha (xem khung dưới).</p>
+            <div class="flex flex-col gap-1">
+              <p class="text-[10px] text-app-text-muted uppercase font-black tracking-widest opacity-30">Username</p>
+              <div class="flex items-center gap-2">
+                <span class="text-sm font-black text-app-text-primary">{{ account.username || '—' }}</span>
+                <CopyButton v-if="account.username" :text="account.username" />
+              </div>
+            </div>
+            <PasswordField doctype="GAM Account" :name="account.name" fieldname="account_password" label="Mật khẩu" :has-value="ownHasPassword" />
+            <TotpCodeWidget doctype="GAM Account" :name="account.name" fieldname="totp_secret" label="2FA / Mã TOTP" :has-value="ownHasTotp" />
           </div>
 
-          <!-- Account password -->
-          <PasswordField doctype="GAM Account" :name="account.name" fieldname="account_password" label="Mật khẩu" />
+          <!-- ② Platform account login (inherited from parent PLATFORM node) -->
+          <div v-if="hasParent" class="bg-app-surface border border-app-border rounded-2xl p-6 shadow-sm space-y-4">
+            <div class="flex items-center justify-between gap-2 flex-wrap">
+              <h3 class="text-app-text-primary font-black text-sm uppercase tracking-tight">🖥️ Đăng nhập tài khoản Platform</h3>
+              <router-link
+                v-if="parentAccount" :to="`/platform-accounts/${account.parent_account}`"
+                class="text-[10px] text-indigo-600 hover:underline font-bold"
+              >↳ {{ parentAccount.username || account.parent_account }} ({{ parentAccount.platform || '?' }})</router-link>
+            </div>
+            <p class="text-[10px] text-app-text-muted italic">Node Game này dùng chung thông tin đăng nhập với Platform cha. Sử dụng các thông tin dưới đây để đăng nhập vào {{ parentAccount?.platform || 'platform' }}.</p>
+            <div class="flex flex-col gap-1">
+              <p class="text-[10px] text-app-text-muted uppercase font-black tracking-widest opacity-30">Username Platform</p>
+              <div class="flex items-center gap-2">
+                <span class="text-sm font-black text-app-text-primary">{{ parentAccount?.username || '—' }}</span>
+                <CopyButton v-if="parentAccount?.username" :text="parentAccount.username" />
+              </div>
+            </div>
+            <PasswordField doctype="GAM Account" :name="account.parent_account" fieldname="account_password" label="Mật khẩu Platform" />
+            <TotpCodeWidget doctype="GAM Account" :name="account.parent_account" fieldname="totp_secret" label="2FA / Mã TOTP Platform" :has-value="!!parentAccount?.totp_secret" />
+          </div>
 
-          <!-- TOTP — live 6-digit code generator (Design §5.6) -->
-          <TotpCodeWidget doctype="GAM Account" :name="account.name" fieldname="totp_secret" label="2FA / Mã TOTP" :has-value="!!account.totp_secret" />
-
-          <!-- Code request -->
-          <div>
-            <p class="text-[10px] text-app-text-muted uppercase font-black tracking-widest opacity-30 mb-2">Verification code</p>
-            <CodeRequestButton
-              :email-name="account.email || (emailDoc && emailDoc.name) || ''"
-              :account-name="account.name"
-              :platform="codePlatform"
-            />
+          <!-- ③ Email -->
+          <div class="bg-app-surface border border-app-border rounded-2xl p-6 shadow-sm space-y-4">
+            <h3 class="text-app-text-primary font-black text-sm uppercase tracking-tight">📧 Email</h3>
+            <div class="flex flex-col gap-1">
+              <p class="text-[10px] text-app-text-muted uppercase font-black tracking-widest opacity-30">Địa chỉ email</p>
+              <div class="flex items-center gap-2 flex-wrap">
+                <span v-if="emailDoc?.address" class="text-sm font-black text-app-text-primary">{{ emailDoc.address }}</span>
+                <span v-else class="text-sm text-app-text-muted italic">—</span>
+                <CopyButton v-if="emailDoc?.address" :text="emailDoc.address" />
+                <router-link v-if="emailDoc" :to="`/emails/${emailDoc.name}`" class="text-[10px] text-indigo-600 hover:underline ml-auto">→ xem mã</router-link>
+              </div>
+            </div>
+            <div>
+              <p class="text-[10px] text-app-text-muted uppercase font-black tracking-widest opacity-30 mb-2">Verification code</p>
+              <CodeRequestButton
+                :email-name="account.email || (emailDoc && emailDoc.name) || ''"
+                :account-name="account.name"
+                :platform="codePlatform"
+              />
+            </div>
           </div>
         </div>
 
@@ -170,7 +204,7 @@
               <div class="flex items-center gap-2 flex-wrap">
                 <span class="font-black text-app-text-primary text-sm">🎮 {{ gameName(g.game) }}</span>
                 <span v-if="g.is_main" class="text-[10px] text-amber-500 font-black">★ MAIN</span>
-                <span v-if="g.server" class="text-[10px] text-app-text-muted bg-app-surface px-2 py-0.5 rounded-md">🌐 {{ serverLabel(g.server) }}</span>
+                <span v-if="g.server_name" class="text-[10px] text-app-text-muted bg-app-surface px-2 py-0.5 rounded-md">🌐 {{ g.server_name }}</span>
                 <button
                   v-if="canEdit" @click="askRemoveGame(g)"
                   class="ml-auto text-[10px] text-red-400/80 hover:text-red-500 font-bold px-2 py-1 rounded-lg hover:bg-red-500/10 transition"
@@ -188,7 +222,7 @@
         </div>
 
         <!-- Links -->
-        <AccountLinkSection ref="linkSection" :account-name="account.name" :can-edit="canEdit" @add-link="showLinkDialog = true" />
+        <AccountLinkSection ref="linkSection" :account-name="account.name" :parent-account="account.parent_account || ''" :parent-account-doc="parentAccount" :can-edit="canEdit" @add-link="showLinkDialog = true" />
 
         <!-- Activity timeline (Req #3 — scrollbar-capped) -->
         <AccountActivitySection ref="activitySection" :account-name="account.name" />
@@ -268,11 +302,21 @@ const canCheckout = computed(() => true) // any GAM user may checkin (start)
 
 const loading = ref(true)
 const account = ref(null)
+// Parent PLATFORM doc (when this node is an on-platform GAME account), so the
+// credential section can separately surface the platform login info.
+const parentAccount = ref(null)
 // (role, game) bindings for this account, loaded from the first-class binding
 // endpoint (getDoc no longer returns a games child table — role lives on the
 // binding). Drives the Games section, the header role badges + main game.
 const roleGames = ref([])
 const emailDoc = ref(null)
+// Whether the GAME node carries its OWN password/TOTP (vs. inheriting from the
+// PLATFORM parent). Frappe never returns Password-field values via getDoc, so we
+// resolve these flags once via gam.api.resolve_account_credentials and bind them
+// onto block ① so a node without its own secret shows a graceful "not set /
+// inherited" hint instead of an error-throwing reveal button (Bug 1).
+const ownHasPassword = ref(false)
+const ownHasTotp = ref(false)
 const activeUsage = ref(null)
 const linkSection = ref(null)
 const activitySection = ref(null)
@@ -304,14 +348,12 @@ const mainGameName = computed(() => {
   const main = rows.find(r => Number(r.is_main) || r.is_main === true) || rows[0] || null
   return main ? gameName(main.game) : ''
 })
+const hasParent = computed(() => !!account.value?.parent_account)
 const codePlatform = computed(() => platformMeta(account.value?.platform)?.code_platform || '')
 
 function gameName(link) {
   const g = games.value.find(x => x.name === link)
   return g?.game_name || link || '—'
-}
-function serverLabel(link) {
-  return link || ''
 }
 function dlcLabel(link) {
   const d = dlcs.value.find(x => x.name === link)
@@ -373,14 +415,41 @@ async function loadRoleGames() {
   }
 }
 
+// Resolve whether this GAME node owns a password/TOTP of its own. The backend
+// returns effective credentials plus `own_has_password`/`own_has_totp` flags;
+// we only consume the flags here (the actual reveal still goes through the
+// dedicated, audit-logged reveal endpoint). Fail-closed: on any error we treat
+// the node as having no own secret so block ① degrades to "inherited" UX.
+async function loadCredFlags() {
+  if (!route.params.name) { ownHasPassword.value = false; ownHasTotp.value = false; return }
+  try {
+    const res = await frappeCall('gam.api.resolve_account_credentials', { game_account_name: route.params.name })
+    ownHasPassword.value = !!(res && res.own_has_password)
+    ownHasTotp.value = !!(res && res.own_has_totp)
+  } catch {
+    ownHasPassword.value = false
+    ownHasTotp.value = false
+  }
+}
+
 async function loadAccount() {
   if (!route.params.name) return
   loading.value = true
   try {
     account.value = await getDoc('GAM Account', route.params.name)
-    // resolve email doc + active usage + (role, game) bindings in parallel
-    const tasks = [loadActiveUsage(), loadRoleGames()]
+    // Hierarchy-aware routing: PLATFORM accounts live under
+    // /platform-accounts/:name (a dedicated detail view). Bounce legacy
+    // /accounts/:name hits for a platform so old bookmarks land correctly and
+    // the two account tiers never share one layout.
+    if (account.value && account.value.account_level === 'PLATFORM') {
+      router.replace(`/platform-accounts/${route.params.name}`)
+      return
+    }
+    // resolve email doc + active usage + (role, game) bindings (+ parent doc)
+    // in parallel.
+    const tasks = [loadActiveUsage(), loadRoleGames(), loadCredFlags()]
     if (account.value?.email) tasks.push(loadEmail(account.value.email))
+    if (account.value?.parent_account) tasks.push(loadParent(account.value.parent_account))
     await Promise.all(tasks)
   } catch {
     account.value = null
@@ -395,6 +464,16 @@ async function loadEmail(name) {
     emailDoc.value = await getDoc('GAM Email', name)
   } catch {
     emailDoc.value = null
+  }
+}
+
+// Load the parent PLATFORM doc so the credential section can display the
+// platform's own username/platform/2FA marker separately from the game node.
+async function loadParent(name) {
+  try {
+    parentAccount.value = await getDoc('GAM Account', name)
+  } catch {
+    parentAccount.value = null
   }
 }
 
@@ -541,7 +620,7 @@ async function confirmDelete() {
       success('Đã xoá')
       deleteOpen.value = false
       loadGamesByRole(true)
-      router.push('/accounts')
+      router.push('/admin/game-accounts')
     }
   } catch (e) {
     deleteError.value = e.message || 'Xoá thất bại'
@@ -560,10 +639,18 @@ const isActive = ref(false)
 
 function onAccountChanged(data) {
   if (!isActive.value) return
-  if (!data || data.account !== route.params.name) return
-  // usage / lock state changed for the visible account → refresh usage + activity
-  loadActiveUsage()
-  activitySection.value?.refresh?.()
+  if (!data) return
+  if (data.account === route.params.name) {
+    // usage / lock state changed for the visible account → refresh usage + activity
+    loadActiveUsage()
+    activitySection.value?.refresh?.()
+  }
+  // Bidirectional sync: when the PLATFORM parent changes (credentials/username
+  // updated, or this node was just attached to it) refresh the inherited
+  // "Đăng nhập Platform" block so the child view stays in sync with the parent.
+  if (account.value?.parent_account && data.account === account.value.parent_account) {
+    loadParent(account.value.parent_account)
+  }
 }
 
 onMounted(() => {

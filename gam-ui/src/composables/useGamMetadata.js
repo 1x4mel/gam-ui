@@ -158,7 +158,7 @@ async function load(force = false) {
     const [g, e, s, d] = await Promise.all([
       getList('GAM Game', { fields: ['name', 'game_name', 'publisher', 'is_active'], filters: [['is_active', '=', 1]], limit: 500, order_by: 'game_name asc' }),
       getList('GAM Email', { fields: ['name', 'address', 'provider', 'is_active'], filters: [['is_active', '=', 1]], limit: 500, order_by: 'address asc' }),
-      getList('GAM Game Server', { fields: ['name', 'game', 'region', 'is_active'], filters: [['is_active', '=', 1]], limit: 500, order_by: 'region asc' }),
+      getList('GAM Game Server', { fields: ['name', 'game', 'server_name', 'is_active'], filters: [['is_active', '=', 1]], limit: 500, order_by: 'server_name asc' }),
       getList('GAM DLC', { fields: ['name', 'dlc_name', 'game'], limit: 500, order_by: 'dlc_name asc' }),
     ])
     games.value = g

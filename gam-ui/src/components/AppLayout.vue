@@ -300,7 +300,7 @@ const userNav = [
 // snapshots do not linger in the KeepAlive cache.
 const KEEP_ALIVE_VIEWS = [
   'DashboardView',
-  'AccountListView',
+  'GameAccountsView',
   'EmailListView',
   'ActiveAccountsView',
   'SearchView',
@@ -308,10 +308,10 @@ const KEEP_ALIVE_VIEWS = [
 ]
 
 const adminNav = [
-  { to: '/accounts', icon: '🎮', label: 'Tài khoản', section: 'accounts' },
   { to: '/emails', icon: '🔑', label: 'Mã Code', section: 'emails' },
+  { to: '/admin/platforms', icon: '🖥️', label: 'Tài khoản Platform' },
+  { to: '/admin/game-accounts', icon: '🎮', label: 'Tài khoản Game' },
   { to: '/admin/emails', icon: '📬', label: 'Quản lý Email' },
-  { to: '/admin/games', icon: '🎯', label: 'Game & DLC' },
   { to: '/admin/code-patterns', icon: '🧩', label: 'Code Patterns' },
   { to: '/admin/email-inbound-log', icon: '📨', label: 'Email đến (Webhook)' },
   { to: '/admin/account-usage', icon: '🔑', label: 'Sử dụng tài khoản' },
@@ -320,7 +320,7 @@ const adminNav = [
   { to: '/admin/role-audit', icon: '🛡️', label: 'Cách ly vai trò' },
   { to: '/admin/access', icon: '🔐', label: 'Phân quyền truy cập' },
   { to: '/admin/webhook', icon: '⚙️', label: 'Cấu hình Webhook' },
-  { to: '/admin/settings', icon: '🛠️', label: 'Cài đặt GAM' },
+  { to: '/admin/settings', icon: '🛠️', label: 'Cài đặt' },
 ]
 
 const showAdmin = computed(() => isGamAdmin.value || isAdmin.value)
@@ -353,15 +353,15 @@ function isRoleActive(value, game = '') {
   return (game || '') === (route.params.game || '')
 }
 
-/** Plain "Tài khoản" back-office is active only on the bare /accounts path.
+/** The back-office "Tài khoản Game" view is active only on /admin/game-accounts.
  * Role/game now live under /role/... so there is nothing to disambiguate here. */
-function isAccountsHomeActive() {
-  return route.path === '/accounts'
+function isGameAccountsActive() {
+  return route.path === '/admin/game-accounts'
 }
 
 function navItemActive(item) {
   if (!item) return false
-  if (item.to === '/accounts') return isAccountsHomeActive()
+  if (item.to === '/admin/game-accounts') return isGameAccountsActive()
   if (item.to === '/') return route.path === '/'
   return route.path === item.to || route.path.startsWith(item.to + '/')
 }

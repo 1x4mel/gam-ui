@@ -176,7 +176,7 @@ test.describe('GAM browser e2e smoke', () => {
         ['Yêu cầu mã', 'Yêu cầu mã'],
         ['Email đến (Webhook)', 'Nhật ký Email đến'],
         ['Sử dụng tài khoản', 'Sử dụng tài khoản'],
-        ['Game & DLC', 'Game & DLC'],
+        ['Cài đặt', 'Cài đặt'],
       ]) {
         await clickNav(page, nav)
         await waitForHeading(page, heading)
