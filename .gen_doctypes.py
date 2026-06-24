@@ -15,7 +15,7 @@ BASE = os.path.expanduser("~/frappe-bench/apps/gam/gam/gam/doctype")
 PLATFORMS = "STEAM\nBATTLENET\nXBOX\nEPIC\nSTANDALONE"
 CODE_PLATFORMS = "STEAM\nBATTLENET\nPOE\nOTHER"
 ACCOUNT_STATUS = "ACTIVE\nBANNED\nINACTIVE\nSUSPENDED"
-EMAIL_PROVIDERS = "Gmail\nOutlook\nProton\nYahoo\nOther"
+EMAIL_PROVIDERS = "Gmail\nOutlook\nHotmail\nProton\nYahoo\nOther"
 REGIONS = "AMERICAS\nASIA\nEUROPE\nGLOBAL"
 LINK_STATUS = "ACTIVE\nEXPIRED\nREVOKED"
 REVEAL_ACTION = "REVEAL\nCOPY"
@@ -172,6 +172,8 @@ add(
     [
         fld("address", "Data", label="Address", reqd=1, unique=1, in_global_search=1),
         fld("email_password", "Password", label="Email Password", description="Frappe encrypts this on save."),
+        fld("totp_secret", "Password", label="TOTP / 2FA Secret",
+            description="Authenticator secret for this email account (revealed via the audited reveal_password endpoint; already in REVEALABLE_FIELDS)."),
         fld("provider", "Select", label="Provider", options=EMAIL_PROVIDERS),
         fld("notes", "Small Text", label="Notes"),
         fld("is_active", "Check", label="Is Active", default="1", in_list_view=1),

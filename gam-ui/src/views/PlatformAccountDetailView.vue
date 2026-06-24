@@ -122,7 +122,7 @@
               <span v-if="emailDoc?.address" class="text-sm font-black text-app-text-primary">{{ emailDoc.address }}</span>
               <span v-else class="text-sm text-app-text-muted italic">—</span>
               <CopyButton v-if="emailDoc?.address" :text="emailDoc.address" />
-              <router-link v-if="emailDoc" :to="`/emails/${emailDoc.name}`" class="text-[10px] text-indigo-600 hover:underline ml-auto">→ xem mã</router-link>
+              <router-link v-if="emailDoc" :to="`/admin/emails/${emailDoc.name}`" class="text-[10px] text-indigo-600 hover:underline ml-auto">→ chi tiết email</router-link>
             </div>
           </div>
           <div>

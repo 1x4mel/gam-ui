@@ -67,6 +67,9 @@ const routes = [
       { path: 'admin/webhook', component: () => import('../views/WebhookConfigView.vue'), name: 'WebhookConfigView', meta: { roles: ['GAM Admin'] } },
       { path: 'admin/code-patterns', component: () => import('../views/CodePatternsView.vue'), name: 'CodePatternsView', meta: { roles: ['GAM Admin'] } },
       { path: 'admin/emails', component: () => import('../views/EmailAccountsView.vue'), name: 'EmailAccountsView', meta: { roles: ['GAM Admin'] } },
+      // Email ACCOUNT detail (distinct from /emails/:name which is a CODE detail).
+      // Exposes credentials via the audited reveal endpoint — admin-only.
+      { path: 'admin/emails/:name', component: () => import('../views/EmailAccountDetailView.vue'), name: 'EmailAccountDetailView', meta: { roles: ['GAM Admin'] } },
       { path: 'admin/settings', component: () => import('../views/AdminSettingsView.vue'), name: 'AdminSettingsView', meta: { roles: ['GAM Admin'] } },
       { path: 'admin/access', component: () => import('../views/AccessGrantView.vue'), name: 'AccessGrantView', meta: { roles: ['GAM Admin'] } },
 

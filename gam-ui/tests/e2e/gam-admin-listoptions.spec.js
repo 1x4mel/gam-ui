@@ -257,7 +257,10 @@ test.describe('GAM configurable lists + email delete/ignore (Plan §7)', () => {
         // the "Không thể xoá" panel listing the linked account.
         await page.locator('.fixed.inset-0').getByRole('button', { name: 'Xoá', exact: true }).click()
         await expect(page.getByText('Không thể xoá', { exact: false })).toBeVisible({ timeout: 10_000 })
-        await expect(page.getByText(username, { exact: true })).toBeVisible()
+        // The username now appears both in the email card's dependency summary
+        // (the redesign surfaces linked accounts) and in the blocked modal —
+        // scope to the modal so the assertion targets the surfaced link only.
+        await expect(page.locator('.fixed.inset-0').getByText(username, { exact: true })).toBeVisible()
         // Only the "Đóng" (close) action is available — no destructive button.
         await page.locator('.fixed.inset-0').getByRole('button', { name: 'Đóng', exact: true }).click()
         await expect(page.getByText('Không thể xoá', { exact: false })).toBeHidden()

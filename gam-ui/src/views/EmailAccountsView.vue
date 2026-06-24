@@ -59,7 +59,12 @@
       <LoadingSpinner v-if="loading" size="md" />
       <EmptyState v-else-if="!filtered.length" icon="📬" text="Chưa có email nào" subtext="Thêm email account để hệ thống nhận diện code." />
       <div v-else class="space-y-2">
-        <div v-for="e in filtered" :key="e.name" class="bg-app-surface border border-app-border rounded-2xl p-4">
+        <!-- Card: whole-card link to the email-account detail; inline actions
+             stop propagation so Sửa/Tắt/Xoá don't navigate. -->
+        <router-link
+          v-for="e in filtered" :key="e.name" :to="`/admin/emails/${e.name}`"
+          class="block bg-app-surface border border-app-border rounded-2xl p-4 hover:border-indigo-600/50 transition"
+        >
           <div class="flex items-center gap-3">
             <span class="text-lg">{{ providerIcon(e.provider) }}</span>
             <div class="flex-1 min-w-0">
@@ -72,91 +77,46 @@
               <p v-if="e.notes" class="text-[10px] text-app-text-muted mt-0.5 truncate">{{ e.notes }}</p>
             </div>
             <div class="flex items-center gap-1 shrink-0">
-              <button
-                @click="toggleExpand(e)"
-                class="text-[10px] text-app-text-muted hover:text-indigo-600 font-bold px-2 py-1 rounded-lg hover:bg-app-bg transition inline-flex items-center gap-1"
-                :title="'Tài khoản liên kết + lấy code nhanh'"
-              >
-                <span class="transition-transform" :class="expandedEmail === e.name ? 'rotate-180' : ''">▾</span>
-                <span>{{ linkedCount(e) }}</span>
-              </button>
-              <button @click="openEdit(e)" class="text-[10px] text-app-text-muted hover:text-indigo-600 font-bold px-2 py-1 rounded-lg hover:bg-app-bg transition">Sửa</button>
-              <button @click="toggleActive(e)" class="text-[10px] text-app-text-muted hover:text-indigo-600 font-bold px-2 py-1 rounded-lg hover:bg-app-bg transition">{{ e.is_active ? 'Tắt' : 'Bật' }}</button>
-              <button @click="remove(e)" class="text-[10px] text-red-400/80 hover:text-red-500 font-bold px-2 py-1 rounded-lg hover:bg-red-500/10 transition">Xoá</button>
+              <button @click.prevent="openEdit(e)" class="text-[10px] text-app-text-muted hover:text-indigo-600 font-bold px-2 py-1 rounded-lg hover:bg-app-bg transition">Sửa</button>
+              <button @click.prevent="toggleActive(e)" class="text-[10px] text-app-text-muted hover:text-indigo-600 font-bold px-2 py-1 rounded-lg hover:bg-app-bg transition">{{ e.is_active ? 'Tắt' : 'Bật' }}</button>
+              <button @click.prevent="remove(e)" class="text-[10px] text-red-400/80 hover:text-red-500 font-bold px-2 py-1 rounded-lg hover:bg-red-500/10 transition">Xoá</button>
             </div>
           </div>
 
-          <!-- Linked game accounts + quick code request (E2) -->
-          <div v-if="expandedEmail === e.name" class="mt-3 pt-3 border-t border-app-border space-y-3">
-            <LoadingSpinner v-if="accountsLoading[e.name]" size="sm" />
-            <template v-else-if="(accountsBy[e.name] || []).length">
-              <div
-                v-for="a in accountsBy[e.name]" :key="a.name"
-                class="bg-app-bg border border-app-border rounded-2xl p-3"
-              >
-                <div class="flex items-center gap-2 mb-2">
-                  <PlatformBadge :platform="a.platform" size="xs" />
-                  <router-link :to="`/accounts/${a.name}`" class="font-black text-app-text-primary text-sm truncate hover:text-indigo-600 transition flex-1">{{ a.username || a.name }}</router-link>
-                  <StatusBadge :status="a.status" />
-                </div>
-                <CodeRequestButton
-                  :email-name="e.name"
-                  :account-name="a.name"
-                  :platform="codePlatformFor(a.platform)"
-                />
-              </div>
-            </template>
-            <p v-else class="text-[10px] text-app-text-muted italic">Chưa có tài khoản nào liên kết email này.</p>
+          <!-- Dependency summary (platform vs game nodes) -->
+          <div class="mt-3 pt-3 border-t border-app-border space-y-2">
+            <div v-if="platformDeps(e).length" class="flex items-center gap-1.5 flex-wrap text-[10px]">
+              <span class="font-black uppercase tracking-widest text-app-text-muted shrink-0">🖥️ Platform ({{ platformDeps(e).length }})</span>
+              <span v-for="a in platformDeps(e)" :key="a.name" class="inline-flex items-center gap-1 bg-app-bg border border-app-border rounded-md px-1.5 py-0.5">
+                <PlatformBadge :platform="a.platform" size="xs" />
+                <span class="font-bold text-app-text-primary truncate max-w-[120px]">{{ a.username || a.name }}</span>
+              </span>
+            </div>
+            <div v-if="gameDeps(e).length" class="flex items-center gap-1.5 flex-wrap text-[10px]">
+              <span class="font-black uppercase tracking-widest text-app-text-muted shrink-0">🎮 Game ({{ gameDeps(e).length }})</span>
+              <span v-for="a in gameDeps(e)" :key="a.name" class="inline-flex items-center gap-1 bg-app-bg border border-app-border rounded-md px-1.5 py-0.5">
+                <PlatformBadge :platform="a.platform" size="xs" />
+                <span class="font-bold text-app-text-primary truncate max-w-[120px]">{{ a.username || a.name }}</span>
+              </span>
+            </div>
+            <p v-if="!platformDeps(e).length && !gameDeps(e).length" class="text-[10px] text-app-text-muted italic">Chưa có tài khoản nào dùng email này.</p>
           </div>
-        </div>
+
+          <div class="mt-3 flex items-center justify-between text-[10px] text-app-text-muted">
+            <span>📅 tạo {{ formatDate(e.creation) }}</span>
+            <span class="text-indigo-600 font-bold">→ chi tiết</span>
+          </div>
+        </router-link>
       </div>
     </div>
 
-    <ModalWrapper :model-value="formOpen" @update:model-value="formOpen = false">
-      <template #header>
-        <div class="px-8 pt-6 pb-2">
-          <h2 class="text-base font-black text-app-text-primary">{{ editing ? 'Sửa Email' : 'Thêm Email' }}</h2>
-        </div>
-      </template>
-      <div class="px-8 pb-2 space-y-3">
-        <div>
-          <label class="block text-[10px] text-app-text-muted uppercase font-black tracking-widest mb-1.5">Địa chỉ email *</label>
-          <input v-model="form.address" type="email" class="w-full input-field px-3 py-2.5 text-sm" placeholder="user@example.com" :disabled="!!editing" />
-          <p v-if="editing" class="text-[9px] text-app-text-muted mt-1">Không thể thay đổi địa chỉ email đã tạo.</p>
-        </div>
-        <div>
-          <label class="block text-[10px] text-app-text-muted uppercase font-black tracking-widest mb-1.5">Provider</label>
-          <select v-model="form.provider" class="w-full input-field px-3 py-2.5 text-sm">
-            <option v-for="opt in PROVIDERS" :key="opt" :value="opt">{{ opt }}</option>
-          </select>
-        </div>
-        <div>
-          <label class="block text-[10px] text-app-text-muted uppercase font-black tracking-widest mb-1.5">Mật khẩu email <span v-if="editing" class="normal-case opacity-50">(để trống nếu không đổi)</span></label>
-          <input v-model="form.email_password" type="password" class="w-full input-field px-3 py-2.5 text-sm" placeholder="••••••••" />
-        </div>
-        <div>
-          <label class="block text-[10px] text-app-text-muted uppercase font-black tracking-widest mb-1.5">Ghi chú</label>
-          <textarea v-model="form.notes" rows="2" class="w-full input-field px-3 py-2.5 text-sm" placeholder="Thông tin thêm..."></textarea>
-        </div>
-        <div class="flex gap-6 flex-wrap">
-          <label class="flex items-center gap-2 text-[10px] text-app-text-muted uppercase font-black tracking-widest cursor-pointer">
-            <input v-model="form.is_active" type="checkbox" class="w-4 h-4 accent-indigo-600" /> Hoạt động
-          </label>
-          <label class="flex items-center gap-2 text-[10px] text-app-text-muted uppercase font-black tracking-widest cursor-pointer">
-            <input v-model="form.forward_verified" type="checkbox" class="w-4 h-4 accent-indigo-600" /> Đã xác minh forward
-          </label>
-        </div>
-        <p v-if="formError" class="text-xs text-red-500 font-medium">{{ formError }}</p>
-      </div>
-      <template #footer>
-        <button @click="formOpen = false" class="px-5 py-2.5 rounded-xl bg-app-bg border border-app-border text-app-text-secondary hover:text-app-text-primary text-[10px] font-black uppercase tracking-widest transition">Huỷ</button>
-        <button @click="submit" :disabled="formSaving" class="px-6 py-2.5 rounded-xl bg-indigo-600 text-white hover:bg-indigo-500 text-[10px] font-black uppercase tracking-widest transition disabled:opacity-50 flex items-center gap-2">
-          <span v-if="formSaving" class="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span> Lưu
-        </button>
-      </template>
-    </ModalWrapper>
+    <!-- Create / edit (shared modal with password + TOTP + recovery editor) -->
+    <EmailAccountFormModal
+      :model-value="formOpen" :editing="editingName" :email="editingDoc"
+      @update:model-value="onFormClose" @saved="onFormSaved"
+    />
 
-    <!-- Delete / blocked-linked-accounts modal -->
+    <!-- Delete / blocked-linked-accounts modal (grouped platform vs game) -->
     <ModalWrapper v-if="deleteTarget" :model-value="true" size="md" @update:model-value="closeDelete">
       <template #header>
         <div class="px-8 pt-6 pb-2">
@@ -174,12 +134,15 @@
           </p>
           <div class="space-y-2 max-h-60 overflow-y-auto custom-scrollbar">
             <router-link
-              v-for="a in blockedAccounts" :key="a.name" :to="`/accounts/${a.name}`"
+              v-for="a in blockedAccounts" :key="a.name"
+              :to="a.account_level === 'PLATFORM' ? `/platform-accounts/${a.name}` : `/accounts/${a.name}`"
               class="block bg-app-bg border border-app-border rounded-xl p-3 hover:border-indigo-600/40 transition"
             >
               <div class="flex items-center gap-2">
                 <PlatformBadge :platform="a.platform" size="xs" />
                 <span class="font-black text-app-text-primary text-sm flex-1 truncate">{{ a.username }}</span>
+                <span v-if="a.account_level === 'PLATFORM'" class="text-[9px] text-indigo-400 font-black bg-indigo-500/10 px-1.5 py-0.5 rounded">PLATFORM</span>
+                <span v-else class="text-[9px] text-amber-400 font-black bg-amber-500/10 px-1.5 py-0.5 rounded">GAME</span>
                 <StatusBadge :status="a.status" />
               </div>
             </router-link>
@@ -212,53 +175,17 @@ import EmptyState from '../components/EmptyState.vue'
 import ModalWrapper from '../components/ModalWrapper.vue'
 import PlatformBadge from '../components/PlatformBadge.vue'
 import StatusBadge from '../components/StatusBadge.vue'
-import CodeRequestButton from '../components/CodeRequestButton.vue'
+import EmailAccountFormModal from '../components/EmailAccountFormModal.vue'
 import { useRealtime } from '../composables/useRealtime.js'
 import { useNotify } from '../composables/useNotify.js'
-import { useGamMetadata } from '../composables/useGamMetadata.js'
 import { getList, frappeCall, updateDoc } from '../api/index.js'
+import { formatDate } from '../utils/format.js'
 
 defineOptions({ name: 'EmailAccountsView' })
 
 const { connected } = useRealtime()
 const { success, error: notifyError } = useNotify()
-const { platformMeta } = useGamMetadata()
 
-// E2 — linked game accounts per GAM Email (lazy loaded on expand).
-const accountsBy = ref({})        // emailName -> [GAM Account]
-const accountsLoading = ref({})    // emailName -> bool
-const expandedEmail = ref(null)
-
-function linkedCount(e) {
-  const list = accountsBy.value[e.name]
-  return Array.isArray(list) ? list.length : ''
-}
-function codePlatformFor(platform) {
-  return platformMeta(platform)?.code_platform || ''
-}
-async function toggleExpand(e) {
-  if (expandedEmail.value === e.name) {
-    expandedEmail.value = null
-    return
-  }
-  expandedEmail.value = e.name
-  if (accountsBy.value[e.name] || accountsLoading.value[e.name]) return
-  accountsLoading.value[e.name] = true
-  try {
-    accountsBy.value[e.name] = await getList('GAM Account', {
-      fields: ['name', 'username', 'platform', 'status'],
-      filters: [['email', '=', e.name]],
-      limit: 200,
-      order_by: 'modified desc',
-    })
-  } catch {
-    accountsBy.value[e.name] = []
-  } finally {
-    accountsLoading.value[e.name] = false
-  }
-}
-
-const PROVIDERS = ['Gmail', 'Outlook', 'Hotmail', 'Proton', 'Yahoo', 'Other']
 const PROVIDER_FILTERS = [
   { value: '', label: 'Tất cả' },
   { value: 'Gmail', label: 'Gmail' },
@@ -280,6 +207,17 @@ const loading = ref(false)
 const providerFilter = ref('')
 const searchQuery = ref('')
 
+// Grouped dependent-account summary per email (platform vs game nodes).
+// One batched call avoids N+1 fetches across the whole list.
+const depsBy = ref({})
+
+function platformDeps(e) {
+  return (depsBy.value[e.name] && depsBy.value[e.name].platform) || []
+}
+function gameDeps(e) {
+  return (depsBy.value[e.name] && depsBy.value[e.name].game) || []
+}
+
 const filtered = computed(() => {
   let list = emails.value
   if (providerFilter.value) list = list.filter((e) => e.provider === providerFilter.value)
@@ -294,12 +232,17 @@ async function load() {
   loading.value = true
   try {
     emails.value = await getList('GAM Email', {
-      fields: ['name', 'address', 'provider', 'notes', 'is_active', 'forward_verified'],
+      fields: ['name', 'address', 'provider', 'notes', 'is_active', 'forward_verified', 'creation'],
       limit: 500,
       order_by: 'modified desc',
     })
+    const names = emails.value.map((e) => e.name)
+    depsBy.value = names.length
+      ? await frappeCall('gam.api.get_email_dependencies', { email_names: JSON.stringify(names) })
+      : {}
   } catch {
     emails.value = []
+    depsBy.value = {}
   } finally {
     loading.value = false
   }
@@ -357,8 +300,6 @@ async function toggleActive(e) {
 }
 
 // ---- Delete (routes through gam.api.delete_email_account) ----
-// Blocks deletion while accounts still link this email, surfacing them so the
-// admin can reassign before retrying.
 const deleteTarget = ref(null)     // email being deleted
 const blockedAccounts = ref(null)  // null = awaiting confirm; array = blocked list
 const deleting = ref(false)
@@ -382,8 +323,6 @@ async function confirmRemove() {
     if (res.blocked) {
       blockedAccounts.value = res.linked_accounts || []
     } else {
-      // Audit logs (code-request log / email code / inbound log) that referenced
-      // the email were snapshotted + detached so deletion could proceed.
       const u = res.unlinked || {}
       const detached = (u.code_request_log || 0) + (u.email_code || 0) + (u.inbound_log || 0)
       success(detached > 0
@@ -400,64 +339,28 @@ async function confirmRemove() {
   }
 }
 
-// ---- Create / edit form ----
+// ---- Create / edit form (shared modal handles the actual save) ----
 const formOpen = ref(false)
-const editing = ref(null) // email name when editing, null when creating
-const form = ref({})
-const formSaving = ref(false)
-const formError = ref('')
+const editingName = ref(null)  // email name when editing, null when creating
+const editingDoc = ref(null)   // email doc to prefill the modal on edit
 
-function emptyForm() {
-  return { address: '', provider: 'Gmail', email_password: '', notes: '', is_active: true, forward_verified: false }
-}
 function openCreate() {
-  editing.value = null
-  formError.value = ''
-  form.value = emptyForm()
+  editingName.value = null
+  editingDoc.value = null
   formOpen.value = true
 }
 function openEdit(e) {
-  editing.value = e.name
-  formError.value = ''
-  form.value = {
-    address: e.address,
-    provider: e.provider || 'Other',
-    email_password: '',
-    notes: e.notes || '',
-    is_active: !!e.is_active,
-    forward_verified: !!e.forward_verified,
-  }
+  editingName.value = e.name
+  // The modal only needs the editable fields; pass the row straight through.
+  editingDoc.value = e
   formOpen.value = true
 }
-
-async function submit() {
-  if (!form.value.address || !form.value.address.includes('@')) {
-    formError.value = 'Nhập địa chỉ email hợp lệ'
-    return
-  }
-  formSaving.value = true
-  formError.value = ''
-  try {
-    const values = {
-      address: form.value.address,
-      provider: form.value.provider,
-      notes: form.value.notes || '',
-      is_active: form.value.is_active ? 1 : 0,
-      forward_verified: form.value.forward_verified ? 1 : 0,
-    }
-    if (form.value.email_password) values.email_password = form.value.email_password
-    await frappeCall('gam.api.save_email_account', {
-      values: JSON.stringify(values),
-      name: editing.value || undefined,
-    })
-    success(editing.value ? 'Đã lưu' : 'Đã tạo')
-    formOpen.value = false
-    load()
-  } catch (e) {
-    formError.value = e.message || 'Lưu thất bại'
-  } finally {
-    formSaving.value = false
-  }
+function onFormClose() {
+  formOpen.value = false
+}
+function onFormSaved() {
+  formOpen.value = false
+  load()
 }
 
 onMounted(loadAll)
