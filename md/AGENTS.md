@@ -2,6 +2,16 @@
 
 > Thiết lập theo `DAILY-WORKFLOW.md` (mục 1). Co-tenancy: app `gam` + SPA `gam-ui` chạy cùng site `erp.local` với erpnext + trader-ui. Xem `.ai/current-plan.md`.
 
+## 📚 Documentation map (đọc theo thứ tự khi onboard)
+
+- [`PROJECT_OVERVIEW.md`](PROJECT_OVERVIEW.md) — bối cảnh: workspace gồm gì, 2 sản phẩm (GAM vs Trader-UI), stack, DocType, điểm vào nhanh.
+- [`ARCHITECTURE.md`](ARCHITECTURE.md) — kiến trúc + luồng dữ liệu (reveal/code/ingest/lease) + vùng nhạy cảm.
+- [`FEATURES.md`](FEATURES.md) — inventory tính năng đã có + endpoint/view tương ứng.
+- [`GAM_Design_Complete_v4.md`](GAM_Design_Complete_v4.md) — thiết kế gốc v4 (spec đầy đủ).
+- [`GAM_Implementation_Frappe_Vue_v4.md`](GAM_Implementation_Frappe_Vue_v4.md) — chi tiết triển khai.
+- `../plans/*.md` — kế hoạch từng feature (architect plan).
+- `../.ai/current-plan.md` — plan của task đang làm (nếu có).
+
 ## Commands
 
 Lưu ý: lệnh `bench` chạy trong `~/frappe-bench` (site **`erp.local`**, IP `192.168.2.111`); lệnh frontend chạy trong `/home/frappe/gam/gam-ui`.
