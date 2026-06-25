@@ -108,6 +108,11 @@
           </div>
         </div>
 
+        <!-- Handoff chain indicator: this lease continues a previous shift. -->
+        <div v-if="l.prev_lease" class="mt-3 flex items-center gap-1.5 text-[10px] text-blue-600 font-bold">
+          <span>🔀</span><span>Nối ca (bàn giao từ ca trước)</span>
+        </div>
+
         <!-- Actions -->
         <div class="mt-4 flex items-center gap-2 flex-wrap">
           <button
@@ -115,6 +120,12 @@
             class="px-3 py-2 rounded-xl bg-red-500/10 text-red-500 border border-red-500/20 text-[10px] font-black uppercase tracking-widest hover:bg-red-500/20 transition active:scale-95 disabled:opacity-50"
           >
             {{ busyAccount === l.account ? '...' : '✓ Checkout' }}
+          </button>
+          <button
+            v-if="showHandoff && (isMine(l) || canForce)" @click="$emit('handoff', l)" :disabled="busyAccount === l.account"
+            class="px-3 py-2 rounded-xl bg-blue-500/10 text-blue-600 border border-blue-500/20 text-[10px] font-black uppercase tracking-widest hover:bg-blue-500/20 transition active:scale-95 disabled:opacity-50"
+          >
+            🔀 Bàn giao
           </button>
           <button
             v-if="canForce && !isMine(l)" @click="$emit('force', l)"
@@ -158,11 +169,12 @@ const props = defineProps({
   settings: { type: Object, default: () => ({}) },
   currentUserId: { type: String, default: '' },
   showCheckout: { type: Boolean, default: true },
+  showHandoff: { type: Boolean, default: true },
   canForce: { type: Boolean, default: false },
   busyAccount: { type: String, default: null },
 })
 
-defineEmits(['detail', 'checkout', 'force'])
+defineEmits(['detail', 'checkout', 'force', 'handoff'])
 
 const maxHours = computed(() => Number(props.settings?.max_online_hours) || 0)
 

@@ -55,9 +55,11 @@
         :settings="settings"
         :current-user-id="user"
         :show-checkout="true"
+        :show-handoff="true"
         :busy-account="busy"
         @detail="goDetail"
         @checkout="endLease"
+        @handoff="openHandoff"
         @force="openForce"
       />
       <p v-if="!filteredMineRows.length" class="text-xs text-app-text-muted italic mt-6">
@@ -77,6 +79,7 @@
         :can-force="adminView"
         @detail="goDetail"
         @checkout="endLease"
+        @handoff="openHandoff"
         @force="openForce"
       />
 
@@ -97,6 +100,15 @@
       :purpose="forceTarget.purpose"
       @close="forceTarget = null"
       @done="onForceDone"
+    />
+
+    <HandoffModal
+      v-if="handoffTarget"
+      :account-name="handoffTarget.account"
+      :order-ref="handoffTarget.order_ref || ''"
+      :is-admin="adminView"
+      @close="handoffTarget = null"
+      @done="onHandoffDone"
     />
   </div>
 </template>
@@ -126,6 +138,7 @@ import EmptyState from '../components/EmptyState.vue'
 import ActiveSection from '../components/ActiveSection.vue'
 import RestedSection from '../components/RestedSection.vue'
 import ForceCheckoutModal from '../components/ForceCheckoutModal.vue'
+import HandoffModal from '../components/HandoffModal.vue'
 import { useAuth } from '../composables/useAuth.js'
 import { useActiveUsage } from '../composables/useActiveUsage.js'
 import { useElapsedTimer, elapsedTier, endedMsOf } from '../composables/useElapsedTimer.js'
@@ -241,6 +254,28 @@ async function onForceDone() {
   success('Đã force checkout')
   await manualRefresh()
 }
+
+// --- shift handoff (bàn giao ca) ---
+const handoffTarget = ref(null)
+function openHandoff(l) {
+  handoffTarget.value = { account: l.account, order_ref: l.order_ref || '' }
+}
+async function onHandoffDone() {
+  handoffTarget.value = null
+  success('Đã bàn giao ca cho user khác')
+  await manualRefresh()
+}
+
+// realtime: notify when a shift is handed TO me (or returned to me on decline).
+const { on: rtOn } = useRealtime()
+rtOn('gam_handoff', (payload) => {
+  if (!payload) return
+  if (payload.action === 'handoff' && payload.to_user === user.value) {
+    success(`🔀 ${payload.account} vừa được bàn giao cho bạn`)
+  } else if (payload.action === 'declined' && payload.to_user === user.value) {
+    success(`🔀 Ca ${payload.account} được trả lại cho bạn`)
+  }
+})
 
 // Refresh + re-anchor the clock to the DB server every time.
 async function manualRefresh() {

@@ -169,6 +169,11 @@
                 <input v-model.number="form.hard_cap_online_hours" type="number" min="1" max="168" class="w-full input-field px-3 py-2.5 text-sm" placeholder="12" />
                 <p class="text-[11px] text-app-text-muted mt-1">Hạn cứng: lease sẽ tự động kết thúc khi vượt qua. Nên lớn hơn hoặc bằng Max Online.</p>
               </div>
+              <div>
+                <label class="block text-[10px] text-app-text-muted uppercase font-black tracking-widest mb-1.5">Continuous Online Cap Hours — cap chuỗi bàn giao ca</label>
+                <input v-model.number="form.continuous_online_cap_hours" type="number" min="1" max="720" class="w-full input-field px-3 py-2.5 text-sm" placeholder="16" />
+                <p class="text-[11px] text-app-text-muted mt-1">Hạn online liên tục của cả chuỗi bàn giao ca. Vượt qua: chặn handoff + scheduler tự force-release (tránh ban vì online quá nhiều). Có thể override per-game.</p>
+              </div>
 
               <div class="flex items-center justify-between gap-3 pt-1">
                 <div class="min-w-0">
@@ -608,6 +613,7 @@ const form = ref({
   max_online_hours: 8,
   min_rested_hours: 8,
   hard_cap_online_hours: 12,
+  continuous_online_cap_hours: 16,
   block_logout_with_active_lease: 1,
 })
 
@@ -620,6 +626,7 @@ async function loadThresholds() {
       max_online_hours: Number(s.max_online_hours) || 8,
       min_rested_hours: Number(s.min_rested_hours) || 8,
       hard_cap_online_hours: Number(s.hard_cap_online_hours) || 12,
+      continuous_online_cap_hours: Number(s.continuous_online_cap_hours) || 16,
       block_logout_with_active_lease: s.block_logout_with_active_lease ? 1 : 0,
     }
   } catch (e) {
@@ -637,12 +644,14 @@ async function save() {
       max_online_hours: form.value.max_online_hours,
       min_rested_hours: form.value.min_rested_hours,
       hard_cap_online_hours: form.value.hard_cap_online_hours,
+      continuous_online_cap_hours: form.value.continuous_online_cap_hours,
       block_logout_with_active_lease: form.value.block_logout_with_active_lease ? 1 : 0,
     })
     form.value = {
       max_online_hours: Number(s.max_online_hours) || 8,
       min_rested_hours: Number(s.min_rested_hours) || 8,
       hard_cap_online_hours: Number(s.hard_cap_online_hours) || 12,
+      continuous_online_cap_hours: Number(s.continuous_online_cap_hours) || 16,
       block_logout_with_active_lease: s.block_logout_with_active_lease ? 1 : 0,
     }
     await refreshActive()
