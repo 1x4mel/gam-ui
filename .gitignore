@@ -33,6 +33,32 @@ venv/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
+
+# ---- Test coverage / reports ----
+coverage/
+*.lcov
+.nyc_output/
+
+# ---- Type-check / build cache ----
+*.tsbuildinfo
+
+# ---- Env secrets (committed .env.development / .env.production are secret-free defaults) ----
+.env
+.env.*.secret
+.env.prod
+*.env.real
+
+# ---- Editor merge / backup cruft ----
+*.bak
+*.orig
+*.rej
+*.tmp
+
+# ---- OS extras ----
+Thumbs.db
+ehthumbs.db
+Desktop.ini
 
 # ---- Misc ----
 .ai/
