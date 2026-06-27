@@ -1,6 +1,5 @@
 <template>
-  <router-link
-    :to="`/accounts/${account.name}`"
+  <div
     class="relative block bg-app-surface border rounded-2xl p-4 transition overflow-hidden"
     :class="cardClass"
   >
@@ -19,7 +18,6 @@
       <p class="font-black text-app-text-primary text-sm flex-1 min-w-0 truncate pl-1">{{ account.username }}</p>
       <StatusBadge :status="account.status" />
       <span v-if="overTime" class="gam-blink text-[9px] font-black text-white bg-red-500 px-1.5 py-0.5 rounded">⚠️ QUÁ GIỜ</span>
-      <span class="text-app-text-muted">›</span>
     </div>
 
     <!-- ── Zone 2: Games (main game first) ──────────────────────────── -->
@@ -111,35 +109,88 @@
     </div>
 
     <!-- Admin back-office: CRUD actions (only when the viewer can manage). -->
-    <div v-if="mode === 'admin' && canManage" class="mt-2 flex items-center gap-2 pl-1">
+    <div v-if="mode === 'admin' && canManage" class="mt-2 flex items-center gap-2 flex-wrap pl-1">
+      <router-link :to="`/accounts/${account.name}`" :class="[actBase, actSecondary]" class="no-underline">📋 Chi tiết</router-link>
       <button
         @click.prevent.stop="$emit('edit')"
-        class="text-[10px] text-app-text-muted hover:text-indigo-600 font-bold px-2 py-1 rounded-lg hover:bg-app-bg transition"
-      >Sửa</button>
+        :class="[actBase, actSecondary]"
+      >✎ Sửa</button>
       <button
         @click.prevent.stop="$emit('delete')"
-        class="text-[10px] text-red-400/80 hover:text-red-500 font-bold px-2 py-1 rounded-lg hover:bg-red-500/10 transition"
-      >Xoá</button>
+        :class="[actBase, 'bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500/20']"
+      >🗑 Xoá</button>
     </div>
 
-    <!-- Operate / task-oriented: inline lease actions.
-         Free → Checkin (start). Held by me → Checkout (release).
-         Held by other + admin → Force release. -->
-    <div v-else-if="mode === 'operate'" class="mt-2 flex items-center gap-2 pl-1">
+    <!-- Operate / task-oriented: ONE unified action row.
+         The card body is a plain <div> (not a link), so clicking anywhere on
+         the card does NOT navigate — only the "📋 Chi tiết" button opens the
+         detail page. Every button shares the same base style as Checkin /
+         Checkout (actBase). -->
+    <div v-else-if="mode === 'operate'" class="mt-2 flex items-center gap-2 flex-wrap pl-1">
+      <!-- Lease action: Free → Checkin / Held by me → Checkout / (admin) Force -->
       <button
         v-if="!lease" @click.prevent.stop="$emit('start')"
-        class="px-3 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-500 text-[10px] font-black uppercase tracking-widest transition active:scale-95 shadow-lg shadow-blue-600/20"
+        :class="[actBase, 'bg-blue-600 text-white hover:bg-blue-500 shadow-lg shadow-blue-600/20']"
       >✅ Checkin</button>
       <button
         v-else-if="mine" @click.prevent.stop="$emit('end')"
-        class="px-3 py-1.5 rounded-lg bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500/20 text-[10px] font-black uppercase tracking-widest transition active:scale-95"
+        :class="[actBase, 'bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500/20']"
       >✓ Checkout</button>
       <button
         v-if="lease && !mine && canForce" @click.prevent.stop="$emit('force')"
-        class="px-3 py-1.5 rounded-lg bg-amber-500/10 text-amber-600 border border-amber-500/30 hover:bg-amber-500/20 text-[10px] font-black uppercase tracking-widest transition active:scale-95"
+        :class="[actBase, 'bg-amber-500/10 text-amber-600 border border-amber-500/30 hover:bg-amber-500/20']"
       >🔓 Force</button>
+
+      <!-- Quick copy: username -->
+      <button
+        v-if="account.username" type="button" title="Copy username"
+        @click.prevent.stop="handleCopy('user', account.username)"
+        :class="[actBase, isCopied('user') ? actCopied : actSecondary]"
+      >{{ isCopied('user') ? '✓ User' : 'User' }}</button>
+
+      <!-- Quick copy: password (audited reveal+copy) -->
+      <button
+        type="button" title="Copy mật khẩu" :disabled="passLoading"
+        @click.prevent.stop="handleCopyPassword"
+        :class="[actBase, (passCopied ? actCopied : actSecondary), 'disabled:opacity-50']"
+      >{{ passLoading ? '… Pass' : (passCopied ? '✓ Pass' : '🔑 Pass') }}</button>
+
+      <!-- Verification code: compact fetch → inline code pill. The button
+           glows (actFresh) while `freshCode` is set — i.e. a webhook just
+           delivered a new code for this account's email. -->
+      <button
+        v-if="!codeState.hasCode" type="button"
+        :title="freshCode ? 'Có code mới! Bấm để lấy' : 'Lấy verification code'"
+        :disabled="codeState.loading" @click.prevent.stop="handleRequestCode"
+        :class="[actBase, freshCode ? actFresh : actSecondary, 'disabled:opacity-50']"
+      >
+        <span v-if="codeState.loading" class="inline-block w-3 h-3 border-2 border-app-text-muted/30 border-t-app-text-muted rounded-full animate-spin align-middle"></span>
+        <span v-else>📧 Code<span v-if="freshCode"> • mới!</span></span>
+      </button>
+      <div v-else class="inline-flex items-center gap-1 px-2 py-1 rounded-lg border border-emerald-500/30 bg-emerald-500/10" :class="freshCode ? 'ring-2 ring-emerald-400/60 animate-pulse' : ''">
+        <code class="text-[11px] font-black font-mono tracking-wider text-emerald-700 select-all">{{ codeState.result.code }}</code>
+        <span class="text-[9px] font-bold text-emerald-600/70">⏳{{ codeState.remainingSeconds }}s</span>
+        <button type="button" title="Copy code" @click.prevent.stop="handleCopyCode"
+          class="px-1.5 py-0.5 text-[10px] text-emerald-600 hover:text-emerald-700 font-black"
+        >{{ codeState.copied ? '✓' : '📋' }}</button>
+      </div>
+
+      <!-- Quick copy: IGN / Btag (game-account-only fields). -->
+      <button
+        v-if="account.ign" type="button" title="Copy IGN"
+        @click.prevent.stop="handleCopy('ign', account.ign)"
+        :class="[actBase, isCopied('ign') ? actCopied : actSecondary]"
+      >{{ isCopied('ign') ? '✓ IGN' : 'IGN' }}</button>
+      <button
+        v-if="account.btag" type="button" title="Copy Btag"
+        @click.prevent.stop="handleCopy('btag', account.btag)"
+        :class="[actBase, isCopied('btag') ? actCopied : actSecondary]"
+      >{{ isCopied('btag') ? '✓ Btag' : 'Btag' }}</button>
+
+      <!-- Detail: the ONLY entry into the account detail page from this card. -->
+      <router-link :to="`/accounts/${account.name}`" :class="[actBase, actSecondary]" class="no-underline">📋 Chi tiết</router-link>
     </div>
-  </router-link>
+  </div>
 </template>
 
 <script setup>
@@ -165,13 +216,17 @@
  *   - edit, delete            (admin mode)
  *   - start, end, force       (operate mode)
  */
-import { computed } from 'vue'
+import { computed, ref, reactive, onMounted, onUnmounted } from 'vue'
 import PlatformBadge from './PlatformBadge.vue'
 import RoleBadge from './RoleBadge.vue'
 import StatusBadge from './StatusBadge.vue'
 import ProgressBar from './AccountCardProgress.vue'
 import { useActiveUsage } from '../composables/useActiveUsage.js'
 import { useAuth } from '../composables/useAuth.js'
+import { useRevealPassword } from '../composables/useRevealPassword.js'
+import { useRequestCode } from '../composables/useRequestCode.js'
+import { useNotify } from '../composables/useNotify.js'
+import { useRealtime } from '../composables/useRealtime.js'
 import {
   elapsedTier,
   tierTextClass,
@@ -203,6 +258,135 @@ defineEmits(['edit', 'delete', 'start', 'end', 'force'])
 
 const { leaseFor, restingFor } = useActiveUsage()
 const { user: authUser } = useAuth()
+const { copy: copyPassword, loading: passLoading } = useRevealPassword()
+const { success: notifySuccess, info: notifyInfo, error: notifyError } = useNotify()
+
+// ---- Unified action-button styling (shared by Checkin/Checkout/Force,
+//      all quick-copy buttons, and the Chi tiết link). -------------------
+const actBase = 'px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition active:scale-95'
+const actSecondary = 'bg-app-bg/50 text-app-text-secondary border border-app-border hover:bg-indigo-500/10 hover:text-indigo-600 hover:border-indigo-500/30'
+const actCopied = 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/30'
+// "Fresh code arrived" glow for the Code button (pulsing emerald ring).
+const actFresh = 'bg-emerald-500/15 text-emerald-600 border border-emerald-500/40 ring-2 ring-emerald-400/60 animate-pulse'
+
+// ---- Quick actions (operate mode) ---------------------------------------
+// Generic clipboard copy for plain fields (username / IGN / Btag). Tracks a
+// single "just copied" key so the matching button flips to the success style.
+const copiedKey = ref('')
+let copiedTimer = null
+function isCopied(k) { return copiedKey.value === k }
+async function handleCopy(key, text) {
+  if (!text) return
+  try {
+    if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(text)
+    else {
+      const ta = document.createElement('textarea')
+      ta.value = text
+      ta.style.position = 'fixed'
+      ta.style.opacity = '0'
+      document.body.appendChild(ta)
+      ta.select()
+      document.execCommand('copy')
+      document.body.removeChild(ta)
+    }
+    copiedKey.value = key
+    clearTimeout(copiedTimer)
+    copiedTimer = setTimeout(() => { copiedKey.value = '' }, 1500)
+    notifySuccess('Đã copy')
+  } catch {
+    notifyError('Copy thất bại')
+  }
+}
+
+// Password copy: audited COPY via gam.api.reveal_password, then clipboard.
+const passCopied = ref(false)
+let passCopiedTimer = null
+async function handleCopyPassword() {
+  try {
+    const value = await copyPassword('GAM Account', props.account.name, 'account_password')
+    if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(value || '')
+    passCopied.value = true
+    clearTimeout(passCopiedTimer)
+    passCopiedTimer = setTimeout(() => { passCopied.value = false }, 1500)
+    notifySuccess('Đã copy mật khẩu')
+  } catch (e) {
+    notifyError(e.message || 'Không copy được mật khẩu')
+  }
+}
+
+// Verification code: same audited endpoint as the detail page, compact inline.
+const codeReq = useRequestCode()
+const codeCopied = ref(false)
+let codeCopiedTimer = null
+// reactive() unwraps the nested refs so the template reads plain values.
+const codeState = reactive({
+  loading: codeReq.loading,
+  result: codeReq.result,
+  hasCode: codeReq.hasCode,
+  remainingSeconds: codeReq.remainingSeconds,
+  copied: codeCopied,
+})
+async function handleRequestCode() {
+  try {
+    const res = await codeReq.request({
+      emailName: props.account.email || '',
+      accountName: props.account.name,
+      platform: props.account.platform || '',
+    })
+    if (res?.status === 'ok') {
+      // The user has now consumed the fresh code → stop the blink.
+      clearFreshCode()
+      notifySuccess('Đã lấy mã xác minh')
+    } else {
+      notifyInfo('Chưa có code mới, thử lại sau 1–2 phút')
+    }
+  } catch (e) {
+    notifyError(e.message || 'Không lấy được mã')
+  }
+}
+async function handleCopyCode() {
+  if (!codeReq.result.value?.code) return
+  try {
+    if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(codeReq.result.value.code)
+    codeCopied.value = true
+    clearTimeout(codeCopiedTimer)
+    codeCopiedTimer = setTimeout(() => { codeCopied.value = false }, 1500)
+  } catch { /* ignore */ }
+}
+
+// ---- Fresh-code signal --------------------------------------------------
+// When a webhook delivers a new code for THIS account's email, the backend
+// broadcasts `gam_new_code` (see gam/realtime.py). We match by email and light
+// up the Code button so the operator notices without leaving the list.
+// `rtFresh` = instant realtime pulse (auto-clears after ~5 min).
+// `account.has_available_code` = server truth from get_accounts_list (an
+// AVAILABLE, unexpired code exists for this account's email right now).
+// The button glows if EITHER is true — so it lights up even when the page is
+// opened AFTER the webhook landed (the realtime event would otherwise be missed).
+const rtFresh = ref(false)
+let freshCodeTimer = null
+function clearFreshCode() {
+  rtFresh.value = false
+  if (freshCodeTimer) { clearTimeout(freshCodeTimer); freshCodeTimer = null }
+}
+function markFreshCode() {
+  rtFresh.value = true
+  notifyInfo(`📧 Có code mới: ${props.account.username}`)
+  if (freshCodeTimer) clearTimeout(freshCodeTimer)
+  freshCodeTimer = setTimeout(clearFreshCode, 5 * 60 * 1000)
+}
+const freshCode = computed(() => rtFresh.value || !!props.account.has_available_code)
+const { on: onRt, off: offRt } = useRealtime()
+function onNewCode(payload) {
+  if (!props.account.email) return
+  const p = payload || {}
+  // Match by owning GAM Email; platform is a secondary guard when present.
+  if (p.email && p.email !== props.account.email) return
+  if (p.platform && props.account.platform && p.platform !== props.account.platform) return
+  markFreshCode()
+}
+onMounted(() => { onRt('gam_new_code', onNewCode) })
+onUnmounted(() => { offRt('gam_new_code', onNewCode); clearFreshCode() })
 
 /** Active lease for this account (shared singleton), or null if free. */
 const lease = computed(() => leaseFor(props.account.name))

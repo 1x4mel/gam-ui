@@ -34,6 +34,33 @@ function stripHtml(html) {
     .trim()
 }
 
+/**
+ * Resolve the ORIGINAL recipient of a (possibly forwarded) message.
+ *
+ * Cloudflare Email Routing rewrites the envelope so `message.to` is the routing
+ * destination (the webhook inbox), not the real owner. For auto-forwards the
+ * original recipient survives in trace headers — pull it so the backend can link
+ * the code to the correct GAM Email even when the forwarded body carries no
+ * plain-text `To:` line (HTML-only forwards).
+ */
+function extractOriginalTo(message, parsed) {
+  const headers = message.headers || {}
+  const direct =
+    headers.get('x-original-to') ||
+    headers.get('x-forwarded-to') ||
+    headers.get('delivered-to') ||
+    ''
+  if (direct) return String(direct).trim()
+  // `Received: ... for <addr>; ...` carries the final delivery target.
+  const received = headers.get('received')
+  if (received) {
+    const m = String(received).match(/for\s+<([^>]+)>/i)
+    if (m) return m[1].trim()
+  }
+  // Last resort: the parsed top-level To (useful for direct, non-forwarded mail).
+  return (parsed.to?.text || '').trim()
+}
+
 export default {
   async email(message, env) {
     // `payload` is built inside try; on transient failure we buffer it into the
@@ -48,17 +75,27 @@ export default {
 
       const toAddr = (message.to || parsed.to?.text || '').trim()
       const dateHeader = message.headers.get('date')
+      const originalTo = extractOriginalTo(message, parsed)
+
+      // Keep a short snippet of the raw text as a debugging aid for forwarded
+      // header blocks (backend caps @ 5000). `rawBuf` is the full RFC5322 bytes.
+      let rawSnippet = ''
+      try {
+        rawSnippet = new TextDecoder('utf-8').decode(rawBuf.slice(0, 2000))
+      } catch {
+        rawSnippet = ''
+      }
 
       payload = {
         email_account: toAddr,
+        original_to: originalTo,
         from: parsed.from?.text || message.from || '',
         subject: parsed.subject || '',
         body: parsed.text || stripHtml(parsed.html) || '',
         html: parsed.html || '',
         message_id: message.headers.get('message-id') || '',
         received_at: dateHeader || new Date().toISOString(),
-        // Keep a short snippet of the raw text as a debugging aid (backend caps @ 5000).
-        raw: '',
+        raw: rawSnippet,
       }
 
       const webhookUrl = env.GAM_WEBHOOK_URL

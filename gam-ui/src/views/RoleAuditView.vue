@@ -56,9 +56,18 @@
                     {{ result.is_isolated ? 'Đã cách ly an toàn' : 'CÓ rò rỉ vai trò — cần sửa' }}
                   </p>
                 </div>
-                <div class="ml-auto flex gap-1.5">
+                <div class="ml-auto flex gap-1.5 items-center">
                   <span v-if="result.is_gam_admin" class="px-2 py-1 rounded-md bg-indigo-500/10 text-indigo-600 text-[10px] font-black uppercase tracking-wider">Admin</span>
                   <span v-if="result.is_gam_member" class="px-2 py-1 rounded-md bg-emerald-500/10 text-emerald-600 text-[10px] font-black uppercase tracking-wider">Member</span>
+                  <!-- Cross-link to the access-grant matrix for this user, so the
+                       admin can jump straight from an audit finding to fixing it. -->
+                  <router-link
+                    :to="{ name: 'AccessGrantView', query: { user: result.user } }"
+                    class="px-2 py-1 rounded-md bg-app-bg border border-app-border text-app-text-secondary hover:text-indigo-600 hover:border-indigo-600/40 text-[10px] font-black uppercase tracking-wider transition"
+                    title="Mở phân quyền chi tiết của user này"
+                  >
+                    🔐 Phân quyền
+                  </router-link>
                 </div>
               </div>
 

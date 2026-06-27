@@ -171,15 +171,18 @@ test.describe('GAM browser e2e smoke', () => {
     })
 
     await test.step('admin log viewers render', async () => {
-      for (const [nav, heading] of [
-        ['Nhật ký Reveal', 'Nhật ký Reveal'],
-        ['Yêu cầu mã', 'Yêu cầu mã'],
-        ['Email đến (Webhook)', 'Nhật ký Email đến'],
-        ['Sử dụng tài khoản', 'Sử dụng tài khoản'],
-        ['Cài đặt', 'Cài đặt'],
+      // Reveal Log & Code Request Log are now tabs of the unified Activity hub;
+      // reach them via their (redirecting) paths. The rest remain nav entries.
+      for (const item of [
+        { path: '/admin/reveal-log', heading: 'Nhật ký Reveal' },
+        { path: '/admin/code-request-log', heading: 'Yêu cầu mã' },
+        { nav: 'Email đến (Webhook)', heading: 'Nhật ký Email đến' },
+        { nav: 'Nhật ký sử dụng', heading: 'Nhật ký sử dụng tài khoản' },
+        { nav: 'Cài đặt', heading: 'Cài đặt' },
       ]) {
-        await clickNav(page, nav)
-        await waitForHeading(page, heading)
+        if (item.path) await gotoApp(page, item.path)
+        else await clickNav(page, item.nav)
+        await waitForHeading(page, item.heading)
       }
     })
 

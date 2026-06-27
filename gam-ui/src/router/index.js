@@ -15,9 +15,14 @@ const routes = [
       { path: '', component: () => import('../views/HomeView.vue'), name: 'DashboardView' },
       { path: 'search', component: () => import('../views/SearchView.vue'), name: 'SearchView' },
 
-      // Email module (F3)
-      { path: 'emails', component: () => import('../views/EmailListView.vue'), name: 'EmailListView', meta: { roles: ['GAM Admin'] } },
-      { path: 'emails/:name', component: () => import('../views/EmailDetailView.vue'), name: 'EmailDetailView' },
+      // Verification codes (operational inbox). Renamed from `/emails` so the
+      // route reflects what it actually shows — the codes themselves, not the
+      // email accounts. `/emails*` kept as a back-compat redirect below.
+      { path: 'codes', component: () => import('../views/EmailListView.vue'), name: 'EmailListView', meta: { roles: ['GAM Admin'] } },
+      { path: 'codes/:name', component: () => import('../views/EmailDetailView.vue'), name: 'EmailDetailView' },
+      // Back-compat: old `/emails` bookmarks/deeplinks → `/codes` (preserves query).
+      { path: 'emails', redirect: (to) => ({ path: '/codes', query: to.query }) },
+      { path: 'emails/:name', redirect: (to) => ({ path: `/codes/${to.params.name}`, query: to.query }) },
 
       // Accounts module (F4)
       // The admin back-office now lives at `/admin/game-accounts`. `/accounts`
@@ -59,19 +64,30 @@ const routes = [
       // Admin (F5 / F6) — GAM Admin only
       { path: 'admin/platforms', component: () => import('../views/PlatformAccountsView.vue'), name: 'PlatformAccountsView', meta: { roles: ['GAM Admin'] } },
       { path: 'admin/game-accounts', component: () => import('../views/GameAccountsView.vue'), name: 'GameAccountsView', meta: { roles: ['GAM Admin'] } },
-      { path: 'admin/reveal-log', component: () => import('../views/RevealLogView.vue'), name: 'RevealLogView', meta: { roles: ['GAM Admin'] } },
-      { path: 'admin/code-request-log', component: () => import('../views/CodeRequestLogView.vue'), name: 'CodeRequestLogView', meta: { roles: ['GAM Admin'] } },
+      // Audit & access-log hub (one view, three tabs). The three former
+      // standalone audit views — Audit Timeline (which already aggregates the
+      // other two), Code Request Log and Reveal Log — are now tabs of this hub.
+      // Old routes redirect with ?tab= so bookmarks/tests keep working.
+      { path: 'admin/activity', component: () => import('../views/ActivityView.vue'), name: 'ActivityView', meta: { roles: ['GAM Admin'] } },
+      { path: 'admin/audit', redirect: (to) => ({ path: '/admin/activity', query: { ...to.query, tab: 'timeline' } }) },
+      { path: 'admin/code-request-log', redirect: (to) => ({ path: '/admin/activity', query: { ...to.query, tab: 'code-requests' } }) },
+      { path: 'admin/reveal-log', redirect: (to) => ({ path: '/admin/activity', query: { ...to.query, tab: 'reveals' } }) },
       { path: 'admin/email-inbound-log', component: () => import('../views/EmailInboundLogView.vue'), name: 'EmailInboundLogView', meta: { roles: ['GAM Admin'] } },
       { path: 'admin/account-usage', component: () => import('../views/AccountUsageView.vue'), name: 'AccountUsageView', meta: { roles: ['GAM Admin'] } },
       { path: 'admin/role-audit', component: () => import('../views/RoleAuditView.vue'), name: 'RoleAuditView', meta: { roles: ['GAM Admin'] } },
       { path: 'admin/webhook', component: () => import('../views/WebhookConfigView.vue'), name: 'WebhookConfigView', meta: { roles: ['GAM Admin'] } },
-      { path: 'admin/code-patterns', component: () => import('../views/CodePatternsView.vue'), name: 'CodePatternsView', meta: { roles: ['GAM Admin'] } },
+      // Code Patterns merged into /admin/settings (tab "patterns"). The old
+      // route redirects with ?tab=patterns so bookmarks/tests keep working
+      // (same back-compat pattern used for the audit-log hub above).
+      { path: 'admin/code-patterns', redirect: (to) => ({ path: '/admin/settings', query: { ...to.query, tab: 'patterns' } }) },
       { path: 'admin/emails', component: () => import('../views/EmailAccountsView.vue'), name: 'EmailAccountsView', meta: { roles: ['GAM Admin'] } },
       // Email ACCOUNT detail (distinct from /emails/:name which is a CODE detail).
       // Exposes credentials via the audited reveal endpoint — admin-only.
       { path: 'admin/emails/:name', component: () => import('../views/EmailAccountDetailView.vue'), name: 'EmailAccountDetailView', meta: { roles: ['GAM Admin'] } },
       { path: 'admin/settings', component: () => import('../views/AdminSettingsView.vue'), name: 'AdminSettingsView', meta: { roles: ['GAM Admin'] } },
       { path: 'admin/access', component: () => import('../views/AccessGrantView.vue'), name: 'AccessGrantView', meta: { roles: ['GAM Admin'] } },
+      // Per-user audit drill-down (reached from the timeline's user link).
+      { path: 'admin/audit/user/:name', component: () => import('../views/AuditUserView.vue'), name: 'AuditUserView', meta: { roles: ['GAM Admin'] } },
 
       { path: ':pathMatch(.*)*', component: () => import('../views/NotFoundView.vue'), name: 'NotFoundView' },
     ],

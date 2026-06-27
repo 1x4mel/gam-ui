@@ -13,6 +13,7 @@
           <div v-for="u in unrecognized" :key="u.name" class="bg-app-surface border border-app-border rounded-xl p-3 flex items-center gap-3">
             <span class="text-sm font-mono text-app-text-primary truncate flex-1">{{ u.candidate_address || u.email_from || u.email_account }}</span>
             <span v-if="u.detected_platform" class="text-[9px] uppercase font-black text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded">{{ u.detected_platform }}</span>
+            <span v-if="u.game" class="text-[9px] uppercase font-black text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded truncate max-w-[120px]">{{ u.game }}</span>
             <span class="text-[9px] text-app-text-muted truncate max-w-[160px]">{{ u.email_subject }}</span>
             <button
               @click="addFromInbound(u)" :disabled="u.adding"

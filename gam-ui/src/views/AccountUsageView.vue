@@ -1,6 +1,6 @@
 <template>
   <div class="h-full flex flex-col overflow-hidden">
-    <PageHeader title="Sử dụng tài khoản" subtitle="Checkout / check-in lease — ai đang mượn tài khoản nào" icon="🔑" :connected="connected" @refresh="refresh" />
+    <PageHeader title="Nhật ký sử dụng tài khoản" subtitle="Audit trail toàn hệ thống — lịch sử mọi phiên checkout / check-in" icon="🔑" :connected="connected" @refresh="refresh" />
 
     <!-- Filters -->
     <div class="flex flex-wrap items-center gap-2 mb-4">
@@ -102,7 +102,9 @@ const STATUS_FILTERS = [
   { value: 'RELEASED', label: 'Đã trả' },
   { value: 'FORCE_RELEASED', label: 'Buông ép' },
 ]
-const statusFilter = ref('IN_USE')
+// Default to "Tất cả" (not IN_USE) so this view reads as a historical audit
+// trail, distinct from the live /active view (which shows only running leases).
+const statusFilter = ref('')
 const queryFilter = ref('')
 const dateFrom = ref('')
 const dateTo = ref('')

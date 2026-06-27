@@ -8,16 +8,25 @@
 // Run:  npm run test:e2e   (needs bench :8000 + the auto-started vite dev)
 
 import { test, expect } from '@playwright/test'
-import { env, login, clickNav, waitForHeading, captureConsole } from './lib.js'
+import { env, login, clickNav, gotoApp, waitForHeading, captureConsole } from './lib.js'
 
 // Each log view exposes the DateRangeFilter + its backing DocType (used to spot
 // the right server request in the network log).
+// Reveal Log & Code Request Log are now tabs of the unified Activity hub
+// (/admin/activity) — reached via their old redirecting paths, which preserve
+// each view's own heading/filters. The other two remain standalone nav entries.
 const LOGS = [
-  { nav: 'Nhật ký Reveal', heading: 'Nhật ký Reveal', doctype: 'GAM Reveal Log' },
-  { nav: 'Yêu cầu mã', heading: 'Yêu cầu mã', doctype: 'GAM Code Request Log' },
+  { path: '/admin/reveal-log', heading: 'Nhật ký Reveal', doctype: 'GAM Reveal Log' },
+  { path: '/admin/code-request-log', heading: 'Yêu cầu mã', doctype: 'GAM Code Request Log' },
   { nav: 'Email đến (Webhook)', heading: 'Nhật ký Email đến', doctype: 'GAM Email Inbound Log' },
-  { nav: 'Sử dụng tài khoản', heading: 'Sử dụng tài khoản', doctype: 'GAM Account Usage' },
+  { nav: 'Nhật ký sử dụng', heading: 'Nhật ký sử dụng tài khoản', doctype: 'GAM Account Usage' },
 ]
+
+// Open a log view either by its (hub-tab) path or its sidebar nav label.
+async function openLog(page, log) {
+  if (log.path) await gotoApp(page, log.path)
+  else await clickNav(page, log.nav)
+}
 
 let consoleErrors = []
 
@@ -45,7 +54,7 @@ test.describe('GAM admin log date-range filters', () => {
 
     for (const log of LOGS) {
       await test.step(`${log.heading} shows Từ/Đến date pickers`, async () => {
-        await clickNav(page, log.nav)
+        await openLog(page, log)
         await waitForHeading(page, log.heading)
         // DateRangeFilter renders exactly two date inputs (labelled Từ / Đến).
         await expect(page.locator('input[type="date"]')).toHaveCount(2)
@@ -54,7 +63,7 @@ test.describe('GAM admin log date-range filters', () => {
 
     // Code Request Log additionally gained an email filter (design §5.9).
     await test.step('Code Request Log exposes email filter', async () => {
-      await clickNav(page, 'Yêu cầu mã')
+      await gotoApp(page, '/admin/code-request-log')
       await waitForHeading(page, 'Yêu cầu mã')
       await expect(page.getByPlaceholder('Lọc theo email...')).toBeVisible()
     })
@@ -62,7 +71,7 @@ test.describe('GAM admin log date-range filters', () => {
 
   test('picking a date drives a server-side filter on Reveal Log', async ({ page }) => {
     await login(page, { user: env.adminUser, pass: env.adminPass, totp: env.adminTotp })
-    await clickNav(page, 'Nhật ký Reveal')
+    await gotoApp(page, '/admin/reveal-log')
     await waitForHeading(page, 'Nhật ký Reveal')
 
     const fromInput = page.locator('input[type="date"]').first()

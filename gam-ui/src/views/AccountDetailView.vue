@@ -116,6 +116,23 @@
                 <CopyButton v-if="account.username" :text="account.username" />
               </div>
             </div>
+            <!-- IGN / Btag — game-account-only fields (GỐC→Cành nodes). -->
+            <div v-if="account.account_level === 'GAME'" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div class="flex flex-col gap-1">
+                <p class="text-[10px] text-app-text-muted uppercase font-black tracking-widest opacity-30">IGN (In-Game Name)</p>
+                <div class="flex items-center gap-2">
+                  <span class="text-sm font-black text-app-text-primary">{{ account.ign || '—' }}</span>
+                  <CopyButton v-if="account.ign" :text="account.ign" />
+                </div>
+              </div>
+              <div class="flex flex-col gap-1">
+                <p class="text-[10px] text-app-text-muted uppercase font-black tracking-widest opacity-30">Btag</p>
+                <div class="flex items-center gap-2">
+                  <span class="text-sm font-black text-app-text-primary">{{ account.btag || '—' }}</span>
+                  <CopyButton v-if="account.btag" :text="account.btag" />
+                </div>
+              </div>
+            </div>
             <PasswordField doctype="GAM Account" :name="account.name" fieldname="account_password" label="Mật khẩu" :has-value="ownHasPassword" />
             <TotpCodeWidget doctype="GAM Account" :name="account.name" fieldname="totp_secret" label="2FA / Mã TOTP" :has-value="ownHasTotp" />
           </div>

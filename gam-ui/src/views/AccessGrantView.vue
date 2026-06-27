@@ -174,6 +174,7 @@
 
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import PageHeader from '../components/PageHeader.vue'
 import LoadingSpinner from '../components/LoadingSpinner.vue'
 import EmptyState from '../components/EmptyState.vue'
@@ -183,6 +184,7 @@ import { frappeCall } from '../api/index.js'
 defineOptions({ name: 'AccessGrantView' })
 
 const { success, error: notifyError } = useNotify()
+const route = useRoute()
 
 // --- user picker ---
 const users = ref([])
@@ -319,6 +321,12 @@ onMounted(async () => {
     users.value = u || []
     grantable.value = rg || { roles: [], items: [] }
     sections.value = sec || []
+    // Deep-link support: ?user=<name> preselects the user (used by the role-audit
+    // cross-link and direct bookmarks). Only apply if that user actually exists.
+    const qUser = route.query.user && String(route.query.user)
+    if (qUser && u && u.some(x => x.name === qUser)) {
+      selectedUser.value = qUser
+    }
   } catch (e) {
     notifyError(e.message || 'Không tải được dữ liệu phân quyền')
   } finally {

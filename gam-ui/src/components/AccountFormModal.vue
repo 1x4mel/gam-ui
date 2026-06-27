@@ -56,6 +56,24 @@
         />
       </div>
 
+      <!-- IGN / Btag — game-account-only fields (only shown when this node is a GAME account). -->
+      <div v-if="isGameNode" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label class="block text-[10px] text-app-text-muted uppercase font-black tracking-widest mb-1.5">IGN</label>
+          <input
+            v-model="form.ign" type="text"
+            class="w-full input-field px-3 py-2.5 text-sm" placeholder="In-Game Name"
+          />
+        </div>
+        <div>
+          <label class="block text-[10px] text-app-text-muted uppercase font-black tracking-widest mb-1.5">Btag</label>
+          <input
+            v-model="form.btag" type="text"
+            class="w-full input-field px-3 py-2.5 text-sm" placeholder="Name#1234"
+          />
+        </div>
+      </div>
+
       <!-- Email -->
       <div>
         <label class="block text-[10px] text-app-text-muted uppercase font-black tracking-widest mb-1.5">Email liên kết *</label>
@@ -184,6 +202,8 @@ const { success, error: notifyError } = useNotify()
 
 const isEdit = computed(() => !!props.account?.name)
 
+const isGameNode = computed(() => (props.account?.account_level || 'GAME') === 'GAME')
+
 const form = ref({
   platform: props.account?.platform || 'STEAM',
   username: props.account?.username || '',
@@ -193,6 +213,8 @@ const form = ref({
   source: props.account?.source || '',
   status: props.account?.status || 'ACTIVE',
   notes: props.account?.notes || '',
+  ign: props.account?.ign || '',
+  btag: props.account?.btag || '',
   games: (props.account?.role_games || []).map(g => ({
     game: g.game || '',
     role: g.role || '',

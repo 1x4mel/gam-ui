@@ -330,6 +330,11 @@
       </template>
     </ModalWrapper>
 
+    <!-- ===================== Code Patterns tab =====================
+         Merged from the former standalone /admin/code-patterns view. Shares the
+         games list already loaded for the Game & DLC tab. -->
+    <AdminSettingsPatternsTab v-if="topTab === 'patterns'" ref="patternsTab" :games="games" />
+
     <!-- Generic confirm dialog -->
     <ConfirmDialog
       v-if="confirmState.open" :title="confirmState.title" :message="confirmState.message"
@@ -340,6 +345,7 @@
 
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import PageHeader from '../components/PageHeader.vue'
 import LoadingSpinner from '../components/LoadingSpinner.vue'
 import EmptyState from '../components/EmptyState.vue'
@@ -347,6 +353,7 @@ import StatusBadge from '../components/StatusBadge.vue'
 import ModalWrapper from '../components/ModalWrapper.vue'
 import SearchableSelect from '../components/SearchableSelect.vue'
 import ConfirmDialog from '../components/ConfirmDialog.vue'
+import AdminSettingsPatternsTab from '../components/AdminSettingsPatternsTab.vue'
 import { useRealtime } from '../composables/useRealtime.js'
 import { useNotify } from '../composables/useNotify.js'
 import { useGamMetadata, optionColorClass } from '../composables/useGamMetadata.js'
@@ -356,6 +363,8 @@ import { formatDate } from '../utils/format.js'
 
 defineOptions({ name: 'AdminSettingsView' })
 
+const route = useRoute()
+const router = useRouter()
 const { connected } = useRealtime()
 const { success, error: notifyError } = useNotify()
 const { loadListOptions } = useGamMetadata()
@@ -364,12 +373,25 @@ const { loadListOptions } = useGamMetadata()
 const { refresh: refreshActive } = useActiveUsage()
 
 // ---- Top-level tabs (plan §3.5) ----
+// `patterns` was merged in from the former standalone /admin/code-patterns view.
 const TOP_TABS = [
   { key: 'games', label: 'Game & DLC', icon: '🎯' },
   { key: 'options', label: 'Tuỳ chọn', icon: '🏷️' },
   { key: 'thresholds', label: 'Ngưỡng', icon: '📊' },
+  { key: 'patterns', label: 'Code Patterns', icon: '🧩' },
 ]
-const topTab = ref('games')
+// Ref to the patterns tab so the header refresh button can reload it.
+const patternsTab = ref(null)
+// Initial tab may come from ?tab= (deep-link from the /admin/code-patterns
+// redirect). Falls back to 'games' for unknown/missing values.
+const validTabKeys = TOP_TABS.map(t => t.key)
+const initialTab = validTabKeys.includes(route.query.tab) ? route.query.tab : 'games'
+const topTab = ref(initialTab)
+// Keep the URL query in sync with the active tab (replace, no history spam) so
+// the deep-link survives reload and the back button.
+watch(topTab, (v) => {
+  router.replace({ query: { ...route.query, tab: v } })
+})
 
 // ---- Game & DLC sub-tabs ----
 const GAME_SUB_TABS = [
@@ -673,6 +695,8 @@ async function refresh() {
   await refreshGamesData()
   await loadThresholds()
   if (topTab.value === 'options') await loadOptions()
+  // The patterns tab manages its own data; ask it to reload if mounted.
+  patternsTab.value?.reload?.()
 }
 
 // ---- Tab watchers ----

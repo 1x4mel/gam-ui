@@ -28,6 +28,7 @@
         <div class="flex items-center gap-2 text-[10px] text-app-text-muted mt-1 flex-wrap">
           <span v-if="e.user">👤 {{ userName(e.user) }}</span>
           <span v-if="e.detail">· {{ e.detail }}</span>
+          <span v-if="e.ip">· 🌐 {{ e.ip }}</span>
         </div>
         <p class="text-[10px] text-app-text-muted mt-0.5">
           🕐 {{ formatDateFull(e.timestamp) }}
@@ -58,13 +59,38 @@ async function load() {
   if (!props.accountName) return
   loading.value = true
   try {
-    const res = await frappeCall('gam.api.get_account_activity', { account: props.accountName, limit: 50 })
-    events.value = res?.data || []
+    // Unified audit timeline (login + code + reveal) with IP/device context.
+    const res = await frappeCall('gam.api.get_audit_timeline', {
+      filters: JSON.stringify({ account: props.accountName }), page: 1, page_size: 50,
+    })
+    events.value = (res?.events || []).map(mapEvent)
   } catch (e) {
     console.error('[AccountActivitySection] load failed:', e)
     events.value = []
   } finally {
     loading.value = false
+  }
+}
+
+function mapEvent(e) {
+  // Normalize the audit-timeline schema to this component's {type,title,...}.
+  let type = 'other'
+  if (e.action === 'LOGIN') type = 'usage'
+  else if (e.action === 'CODE_REQUEST') type = 'code_request'
+  else if (e.action === 'REVEAL' || e.action === 'COPY') type = 'reveal'
+  const title =
+    type === 'usage' ? (e.account_username || 'Checkout') :
+    type === 'code_request' ? (e.detail || 'Code') :
+    type === 'reveal' ? (e.detail || 'Reveal') : e.action
+  return {
+    name: e.source_name,
+    type,
+    title,
+    detail: [e.game, e.platform, e.purpose].filter(Boolean).join(' · ') || '',
+    ip: e.ip_address || '',
+    user: e.user,
+    status: e.status || '',
+    timestamp: e.event_time,
   }
 }
 

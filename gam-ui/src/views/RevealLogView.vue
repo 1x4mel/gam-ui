@@ -1,6 +1,6 @@
 <template>
   <div class="h-full flex flex-col overflow-hidden">
-    <PageHeader title="Nhật ký Reveal" subtitle="Lịch sử xem / copy mật khẩu" icon="🔓" :connected="connected" @refresh="refresh" />
+    <PageHeader v-if="!embedded" title="Nhật ký Reveal" subtitle="Lịch sử xem / copy mật khẩu" icon="🔓" :connected="connected" @refresh="refresh" />
 
     <!-- Filters -->
     <div class="flex flex-wrap items-center gap-2 mb-4">
@@ -82,6 +82,9 @@ import { getList, frappeCall } from '../api/index.js'
 import { formatDateFull, userName } from '../utils/format.js'
 
 defineOptions({ name: 'RevealLogView' })
+defineProps({ embedded: { type: Boolean, default: false } })
+// Exposed so the Activity hub's shared Refresh button can trigger a reload.
+defineExpose({ reload: () => refresh() })
 
 const { connected } = useRealtime()
 

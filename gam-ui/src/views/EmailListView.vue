@@ -38,7 +38,7 @@
       <EmptyState v-else-if="!items.length" icon="📭" text="Không có mã nào" subtext="Mã verification code mới sẽ xuất hiện ở đây." />
       <div v-else class="space-y-2 max-w-4xl mx-auto pb-4">
         <router-link
-          v-for="code in items" :key="code.name" :to="`/emails/${code.name}`"
+          v-for="code in items" :key="code.name" :to="`/codes/${code.name}`"
           class="block bg-app-surface border border-app-border rounded-2xl p-4 hover:border-indigo-600/50 transition"
         >
           <div class="flex items-center gap-3 flex-wrap">
@@ -54,8 +54,8 @@
               </p>
             </div>
           </div>
-          <div v-if="code.email_address || code.email_subject" class="mt-2 flex items-center gap-3 text-[10px] text-app-text-muted">
-            <span v-if="code.email_address" class="truncate">📧 {{ code.email_address }}</span>
+          <div v-if="platformEmail(code) || code.email_subject" class="mt-2 flex items-center gap-3 text-[10px] text-app-text-muted">
+            <span v-if="platformEmail(code)" class="truncate">📧 {{ platformEmail(code) }}</span>
             <span v-if="code.email_subject" class="truncate italic">"{{ code.email_subject }}"</span>
           </div>
         </router-link>
@@ -120,6 +120,14 @@ const {
 
 watch(platformFilter, () => refresh())
 watch(statusFilter, () => refresh())
+
+// Prefer the real platform account address (the email registered on the game
+// platform, e.g. merisede3379@hotmail.com) resolved via the GAM Email link.
+// Falls back to the raw inbound inbox ``email_address`` (gam@gegeteam.xyz) only
+// when the code was not matched to a GAM Email doc.
+function platformEmail(code) {
+  return code.platform_email || code.email_address || ''
+}
 
 function expiryLabel(expiresAt) {
   return humanizeCountdown(expiresAt).label

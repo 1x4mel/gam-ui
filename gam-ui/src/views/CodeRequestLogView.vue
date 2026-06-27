@@ -1,6 +1,6 @@
 <template>
   <div class="h-full flex flex-col overflow-hidden">
-    <PageHeader title="Yêu cầu mã" subtitle="Lịch sử yêu cầu verification code" icon="📝" :connected="connected" @refresh="refresh" />
+    <PageHeader v-if="!embedded" title="Yêu cầu mã" subtitle="Lịch sử yêu cầu verification code" icon="📝" :connected="connected" @refresh="refresh" />
 
     <!-- Filters -->
     <div class="flex flex-wrap items-center gap-2 mb-4">
@@ -86,6 +86,9 @@ import { getList, frappeCall } from '../api/index.js'
 import { formatDateFull, userName } from '../utils/format.js'
 
 defineOptions({ name: 'CodeRequestLogView' })
+defineProps({ embedded: { type: Boolean, default: false } })
+// Exposed so the Activity hub's shared Refresh button can trigger a reload.
+defineExpose({ reload: () => refresh() })
 
 const { connected } = useRealtime()
 

@@ -19,7 +19,7 @@
 import { test, expect } from '@playwright/test'
 import { execSync } from 'node:child_process'
 import { writeFileSync, readFileSync } from 'node:fs'
-import { env, login, clickNav, waitForHeading, expectToast, captureConsole } from './lib.js'
+import { env, login, clickNav, gotoApp, waitForHeading, expectToast, captureConsole } from './lib.js'
 
 const BENCH_DIR = process.env.GAM_BENCH_DIR || '/home/frappe/frappe-bench'
 const STATE_FILE = '/tmp/.gam_e2e_inbound.json'
@@ -147,8 +147,9 @@ test.describe('GAM email content display + code patterns', () => {
 
   test('code patterns page renders seeded POE pattern + create/delete CRUD', async ({ page }) => {
     await login(page, { user: env.adminUser, pass: env.adminPass, totp: env.adminTotp })
-    await clickNav(page, 'Code Patterns')
-    await waitForHeading(page, 'Code Patterns')
+    // Code Patterns is now a tab inside /admin/settings (deep-linked via ?tab=).
+    await gotoApp(page, '/admin/settings?tab=patterns')
+    await expect(page.getByRole('button', { name: '+ Thêm Pattern' })).toBeVisible({ timeout: 15000 })
 
     await test.step('seeded POE pattern is listed', async () => {
       await expect(page.locator('.rounded-2xl').filter({ hasText: 'POE' })).toBeVisible()

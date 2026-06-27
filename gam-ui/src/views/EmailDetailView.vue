@@ -2,7 +2,7 @@
   <DetailPageLayout :loading="loading" loading-text="Đang tải...">
     <template #toolbar>
       <div class="flex items-center gap-3">
-        <BackButton @click="router.push('/emails')" />
+        <BackButton @click="router.push('/codes')" />
         <h2 class="text-base sm:text-lg font-black text-app-text-primary uppercase tracking-tight">Chi tiết Mã</h2>
       </div>
     </template>

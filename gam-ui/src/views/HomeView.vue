@@ -194,7 +194,7 @@ const codeHandler = onNewCode
 
 const modules = [
   { to: '/search', icon: '🔍', label: 'Tìm kiếm', desc: 'Tìm tài khoản / email / game' },
-  { to: '/emails', icon: '📧', label: 'Mã Email', desc: 'Verification code mới nhận' },
+  { to: '/codes', icon: '🔑', label: 'Mã Code', desc: 'Verification code mới nhận' },
   { to: '/accounts', icon: '🎮', label: 'Tài khoản', desc: 'Quản lý tài khoản game' },
 ]
 

@@ -122,11 +122,11 @@
       <div v-if="recentCodes.length" class="bg-app-surface border border-app-border rounded-2xl p-6 shadow-sm">
         <div class="flex items-center justify-between mb-3">
           <h3 class="text-app-text-primary font-black text-sm uppercase tracking-tight">📨 Mã gần đây</h3>
-          <router-link :to="`/emails?email=${emailDoc.name}`" class="text-[10px] text-indigo-600 hover:underline font-bold">xem tất cả →</router-link>
+          <router-link :to="`/codes?email=${emailDoc.name}`" class="text-[10px] text-indigo-600 hover:underline font-bold">xem tất cả →</router-link>
         </div>
         <div class="space-y-2">
           <router-link
-            v-for="c in recentCodes" :key="c.name" :to="`/emails/${c.name}`"
+            v-for="c in recentCodes" :key="c.name" :to="`/codes/${c.name}`"
             class="flex items-center gap-3 bg-app-bg border border-app-border rounded-xl px-3 py-2.5 hover:border-indigo-600/40 transition"
           >
             <PlatformBadge :platform="c.platform" size="xs" />

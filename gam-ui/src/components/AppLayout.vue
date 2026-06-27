@@ -127,6 +127,20 @@
               <span class="text-base">{{ item.icon }}</span>
               <span>{{ item.label }}</span>
             </router-link>
+
+            <!-- 🛡️ Phân quyền / Bảo mật — IAM pair: capability mgmt (access) +
+                 compliance audit (role-audit), grouped for discoverability. -->
+            <template v-if="securityNavItems.length">
+              <p class="text-app-text-muted text-[10px] px-3 pb-1 pt-3 uppercase font-bold tracking-widest flex items-center gap-1.5"><span>🛡️</span> Phân quyền / Bảo mật</p>
+              <router-link
+                v-for="item in securityNavItems" :key="item.to" :to="item.to" @click="sidebarOpen = false"
+                class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition"
+                :class="navItemActive(item) ? 'bg-indigo-600 text-white' : 'text-app-text-secondary hover:bg-indigo-500/10 hover:text-indigo-600'"
+              >
+                <span class="text-base">{{ item.icon }}</span>
+                <span>{{ item.label }}</span>
+              </router-link>
+            </template>
           </div>
         </template>
       </nav>
@@ -308,17 +322,20 @@ const KEEP_ALIVE_VIEWS = [
 ]
 
 const adminNav = [
-  { to: '/emails', icon: '🔑', label: 'Mã Code', section: 'emails' },
+  { to: '/codes', icon: '🔑', label: 'Mã Code', section: 'emails' },
   { to: '/admin/platforms', icon: '🖥️', label: 'Tài khoản Platform' },
   { to: '/admin/game-accounts', icon: '🎮', label: 'Tài khoản Game' },
   { to: '/admin/emails', icon: '📬', label: 'Quản lý Email' },
-  { to: '/admin/code-patterns', icon: '🧩', label: 'Code Patterns' },
+  // Code Patterns merged into /admin/settings as a tab (see redirect in
+  // router). Kept here only as a hidden back-compat entry — not rendered.
+  { to: '/admin/code-patterns', icon: '🧩', label: 'Code Patterns', hidden: true },
   { to: '/admin/email-inbound-log', icon: '📨', label: 'Email đến (Webhook)' },
-  { to: '/admin/account-usage', icon: '🔑', label: 'Sử dụng tài khoản' },
-  { to: '/admin/reveal-log', icon: '🔓', label: 'Nhật ký Reveal' },
-  { to: '/admin/code-request-log', icon: '📝', label: 'Yêu cầu mã' },
-  { to: '/admin/role-audit', icon: '🛡️', label: 'Cách ly vai trò' },
-  { to: '/admin/access', icon: '🔐', label: 'Phân quyền truy cập' },
+  { to: '/admin/account-usage', icon: '🔑', label: 'Nhật ký sử dụng' },
+  { to: '/admin/activity', icon: '🛡️', label: 'Hoạt động', section: 'audit' },
+  // Security/IAM pair grouped under a dedicated sub-header so capability
+  // management (access) and compliance audit (role-audit) sit together.
+  { to: '/admin/role-audit', icon: '🧩', label: 'Cách ly vai trò', group: 'security' },
+  { to: '/admin/access', icon: '🔐', label: 'Phân quyền truy cập', group: 'security' },
   { to: '/admin/webhook', icon: '⚙️', label: 'Cấu hình Webhook' },
   { to: '/admin/settings', icon: '🛠️', label: 'Cài đặt' },
 ]
@@ -328,8 +345,17 @@ const adminView = computed(() => isGamAdmin.value || isAdmin.value)
 // Admin nav filtered by section grants (forward-compatible: admins bypass, so
 // today this is a no-op, but it keeps the sidebar consistent if the admin
 // section ever opens up to fine-scoped non-admin members).
+// `hidden` entries (e.g. the merged Code Patterns back-compat route) are kept
+// out of the sidebar but still resolvable as nav targets.
+function adminNavVisible(items) {
+  return items.filter(item => !item.section || canSection(item.section))
+}
 const adminNavItems = computed(() =>
-  adminNav.filter(item => !item.section || canSection(item.section))
+  adminNavVisible(adminNav.filter(item => !item.hidden && !item.group))
+)
+// The "🛡️ Phân quyền / Bảo mật" sub-group (access + role-audit).
+const securityNavItems = computed(() =>
+  adminNavVisible(adminNav.filter(item => !item.hidden && item.group === 'security'))
 )
 // Sidebar badge: members see their own count; admins see all-active (primary)
 // plus a secondary badge for their own active sessions.
